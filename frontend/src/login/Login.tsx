@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Layout, ArrowRight, Github as GithubIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
@@ -21,6 +23,10 @@ const Login: React.FC = () => {
       const response = await axios.post(`http://localhost:5000${endpoint}`, formData);
       console.log('Success:', response.data);
       setMessage(response.data.message || 'Success!');
+      if (isLogin) {
+        // Successful login -> Redirect to matches
+        navigate('/matches');
+      }
     } catch (error: any) {
       console.error('Error:', error.response?.data || error.message);
       setMessage(error.response?.data?.message || 'Error occurred');

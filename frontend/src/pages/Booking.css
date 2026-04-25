@@ -1,0 +1,239 @@
+.booking-container {
+  min-height: 100vh;
+  background-color: #0b0d17;
+  color: #fff;
+  padding-bottom: 3rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.booking-nav {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 5%;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.match-summary h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.match-summary p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.booking-content {
+  max-width: 1300px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2rem;
+}
+
+.stadium-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.status-legend {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.legend-item::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legend-item.available::before { background-color: #10b981; }
+.legend-item.filling::before { background-color: #f59e0b; }
+.legend-item.sold-out::before { background-color: #ef4444; }
+
+.stadium-layout-container {
+  position: relative;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  aspect-ratio: 16/10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stadium-layout-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.stadium-layout-container:hover .stadium-layout-img {
+  opacity: 1;
+}
+
+.layout-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 1.5rem;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  display: flex;
+  justify-content: center;
+}
+
+.instruction-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #a5b4fc;
+}
+
+.booking-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.selection-summary, .stadium-info-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+}
+
+.selection-summary h4, .stadium-info-box h4 {
+  margin: 0 0 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.summary-empty {
+  text-align: center;
+  padding: 2rem 0;
+  color: #4b5563;
+}
+
+.empty-icon {
+  margin-bottom: 1rem;
+  opacity: 0.2;
+}
+
+.summary-empty p {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.price-details {
+  margin-top: 1.5rem;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.price-row.total {
+  margin-top: 1rem;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #fff;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 1rem 0;
+}
+
+.checkout-btn {
+  width: 100%;
+  padding: 1.25rem;
+  margin-top: 2rem;
+  background: #374151;
+  color: #9ca3af;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: not-allowed;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  color: #818cf8;
+  font-size: 0.9rem;
+}
+
+.stadium-note {
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.booking-loading, .booking-error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #9ca3af;
+}
+
+@media (max-width: 1024px) {
+  .booking-content {
+    grid-template-columns: 1fr;
+  }
+}
