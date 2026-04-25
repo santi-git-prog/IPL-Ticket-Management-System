@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Clock, Users, MapPin, Zap, Info, ShieldCheck, Accessibility, ChevronRight } from 'lucide-react';
+import { getTeamLogo } from '../utils/teamLogos';
 import './MatchDetails.css';
 
 interface Highlight {
@@ -25,12 +26,21 @@ export const MatchDetails = () => {
   const navigate = useNavigate();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [minPrice, setMinPrice] = useState<number>(400);
 
   useEffect(() => {
     const fetchMatchDetails = async () => {
       try {
+        setLoading(true);
         const response = await axios.get(`http://localhost:5000/api/matches/${id}`);
         setMatch(response.data);
+        
+        // Fetch stands to find minimum price
+        const standsRes = await axios.get(`http://localhost:5000/api/matches/${id}/stands`);
+        if (standsRes.data && standsRes.data.length > 0) {
+          const prices = standsRes.data.map((s: any) => s.price);
+          setMinPrice(Math.min(...prices));
+        }
       } catch (error) {
         console.error('Error fetching match details:', error);
       } finally {
@@ -66,11 +76,17 @@ export const MatchDetails = () => {
       <div className="details-hero">
         <div className="hero-content">
           <div className="match-tag">{match.title}</div>
-          <h1 className="teams-heading">
-            <span className="team-highlight">{match.team1}</span> 
-            <span className="vs-text">vs</span> 
-            <span className="team-highlight">{match.team2}</span>
-          </h1>
+          <div className="teams-heading-container">
+            <div className="team-header-item">
+              <img src={getTeamLogo(match.team1)} alt={match.team1} className="team-logo-header" />
+              <span className="team-highlight">{match.team1}</span> 
+            </div>
+            <span className="vs-text">VS</span> 
+            <div className="team-header-item">
+              <img src={getTeamLogo(match.team2)} alt={match.team2} className="team-logo-header" />
+              <span className="team-highlight">{match.team2}</span>
+            </div>
+          </div>
           
           <div className="hero-meta">
             <div className="meta-item">
@@ -119,7 +135,7 @@ export const MatchDetails = () => {
           <div className="booking-card">
             <div className="price-info">
               <span className="price-label">Starting from</span>
-              <h3 className="price-value">₹850</h3>
+              <h3 className="price-value">₹{minPrice.toLocaleString()}</h3>
             </div>
             <button 
               className="book-btn"

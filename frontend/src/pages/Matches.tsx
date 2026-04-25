@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Calendar, MapPin, ArrowRight, Layout } from 'lucide-react';
+import { getTeamLogo } from '../utils/teamLogos';
 import './Matches.css';
 
 interface Match {
@@ -16,6 +17,7 @@ interface Match {
 export const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,44 +63,57 @@ export const Matches = () => {
         {loading ? (
           <div className="loading-state">Loading fixtures...</div>
         ) : (
-          <div className="matches-grid">
-            {matches.map((match) => (
-              <div 
-                key={match.id} 
-                className="match-card" 
-                onClick={() => navigate(`/matches/${match.id}`)}
-              >
-                <div className="match-card-top">
-                  <span className="match-title">{match.title}</span>
-                </div>
-                <div className="match-teams">
-                  <div className="team">
-                    <div className="team-initials">{match.team1.substring(0, 2).toUpperCase()}</div>
-                    <span className="team-name">{match.team1}</span>
+          <>
+            <div className="matches-grid">
+              {matches.slice(0, visibleCount).map((match) => (
+                <div 
+                  key={match.id} 
+                  className="match-card" 
+                  onClick={() => navigate(`/matches/${match.id}`)}
+                >
+                  <div className="match-card-top">
+                    <span className="match-title">{match.title}</span>
                   </div>
-                  <div className="vs-badge">VS</div>
-                  <div className="team">
-                    <div className="team-initials pbks-initials">{match.team2.substring(0, 2).toUpperCase()}</div>
-                    <span className="team-name">{match.team2}</span>
+                  <div className="match-teams">
+                    <div className="team">
+                      <img src={getTeamLogo(match.team1)} alt={match.team1} className="team-logo-img" />
+                      <span className="team-name">{match.team1}</span>
+                    </div>
+                    <div className="vs-badge">VS</div>
+                    <div className="team">
+                      <img src={getTeamLogo(match.team2)} alt={match.team2} className="team-logo-img" />
+                      <span className="team-name">{match.team2}</span>
+                    </div>
+                  </div>
+                  <div className="match-details">
+                    <div className="detail-item">
+                      <Calendar size={16} className="detail-icon" />
+                      <span>{match.date_time}</span>
+                    </div>
+                    <div className="detail-item">
+                      <MapPin size={16} className="detail-icon" />
+                      <span>{match.venue}</span>
+                    </div>
+                  </div>
+                  <div className="match-action">
+                    <span>View Details & Book</span>
+                    <ArrowRight size={18} className="action-icon" />
                   </div>
                 </div>
-                <div className="match-details">
-                  <div className="detail-item">
-                    <Calendar size={16} className="detail-icon" />
-                    <span>{match.date_time}</span>
-                  </div>
-                  <div className="detail-item">
-                    <MapPin size={16} className="detail-icon" />
-                    <span>{match.venue}</span>
-                  </div>
-                </div>
-                <div className="match-action">
-                  <span>View Details & Book</span>
-                  <ArrowRight size={18} className="action-icon" />
-                </div>
+              ))}
+            </div>
+            
+            {visibleCount < matches.length && (
+              <div className="show-more-container">
+                <button 
+                  className="show-more-btn" 
+                  onClick={() => setVisibleCount(matches.length)}
+                >
+                  Show More Matches
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

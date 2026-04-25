@@ -50,6 +50,16 @@ const initDb = async () => {
             )
         `);
 
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS stands (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                city_key VARCHAR(255) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                price INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Insert mock data for Delhi Capitals vs Punjab Kings
         const mockAbout = "It’s Delhi Capitals up against Punjab Kings in a clash that could swing either way. Led by Axar Patel with an experienced batting core stacked with firepower. You’ve got KL Rahul doing his thing with the bat, backed by power hitters like Pathum Nissanka, Ben Duckett, and David Miller. The bowling pack packs a punch too, with Kuldeep Yadav, and Lungi Ngidi ready to take the shine off any big total.\\n\\nPunjab Kings aren’t here to make up the numbers. With Shreyas Iyer steering the ship, and big threats like Prabhsimran Singh, Marcus Stoinis, and Arshdeep Singh in their ranks, they can shake DC early and keep the scoreboard pressure on. If DC lose early wickets it opens the door for PBKS to pounce. But if Delhi’s experience shows and they dominate the middle overs with Axar and company, this one could tilt their way.";
         
@@ -74,6 +84,34 @@ const initDb = async () => {
                     ?
                 )
             `, [mockAbout, mockHighlights]);
+        }
+
+        // Seed Bangalore stands if empty
+        const checkStands = await pool.execute('SELECT count(*) as count FROM stands WHERE city_key = "Bangalore"');
+        if (checkStands[0][0].count === 0) {
+            const bangaloreStands = [
+                ['Bangalore', 'Sun Pharma A Stand', 2300],
+                ['Bangalore', 'Confirmtkt H Upper Stand', 3300],
+                ['Bangalore', 'D Corporate Stand', 3300],
+                ['Bangalore', 'Puma B Stand', 3300],
+                ['Bangalore', 'Boat C Stand', 3300],
+                ['Bangalore', 'E Stand', 3300],
+                ['Bangalore', 'R Rahul Dravid Platinum Lounge', 4000],
+                ['Bangalore', 'Javagal Srinath Stand P1 Annexe', 6000],
+                ['Bangalore', 'Venkatesh Prasad Stand P4', 6000],
+                ['Bangalore', 'BKT Tyres Executive Lounge', 10000],
+                ['Bangalore', 'Sun Pharma Grand Terrace', 10000],
+                ['Bangalore', 'BS Chandrashekhar Stand P Terrace', 15000],
+                ['Bangalore', 'Syed Kirmani Stand P Corporate', 25000],
+                ['Bangalore', 'GR Vishwanath Stand P2', 42000],
+            ];
+            
+            for (const stand of bangaloreStands) {
+                await pool.execute(
+                    'INSERT INTO stands (city_key, name, price) VALUES (?, ?, ?)',
+                    stand
+                );
+            }
         }
 
         console.log('Database initialized successfully');

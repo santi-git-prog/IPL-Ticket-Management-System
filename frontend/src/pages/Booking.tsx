@@ -36,25 +36,45 @@ export const Booking = () => {
   const navigate = useNavigate();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [availableStands, setAvailableStands] = useState<{ name: string, price: number }[]>([]);
+  const [selectedStand, setSelectedStand] = useState<string>('');
+  const [quantity, setQuantity] = useState<number>(1);
+
+  const getCity = (venue: string | undefined) => {
+    if (!venue) return '';
+    // Handle both comma-separated and simple city names
+    const parts = venue.split(',');
+    const city = parts[parts.length - 1].trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+    return city;
+  };
 
   useEffect(() => {
-    const fetchMatchDetails = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/matches/${id}`);
-        setMatch(response.data);
+        setLoading(true);
+        console.log('Fetching details for Match ID:', id);
+        
+        // 1. Fetch match info
+        const matchRes = await axios.get(`http://localhost:5000/api/matches/${id}`);
+        setMatch(matchRes.data);
+        
+        // 2. Fetch stands directly by match ID (Backend handles city mapping)
+        const standsRes = await axios.get(`http://localhost:5000/api/matches/${id}/stands`);
+        console.log(`Stands loaded for Match ${id}:`, standsRes.data.length, 'stands found');
+        setAvailableStands(standsRes.data);
+
       } catch (error) {
-        console.error('Error fetching match details:', error);
+        console.error('Error fetching booking data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMatchDetails();
+    fetchData();
   }, [id]);
 
   const getStadiumImage = (venue: string) => {
-    const parts = venue.split(',');
-    const city = parts[parts.length - 1].trim();
+    const city = getCity(venue);
     return stadiumImageMap[city] || 'default-stadium.jpg';
   };
 
@@ -62,6 +82,12 @@ export const Booking = () => {
   if (!match) return <div className="booking-error">Match not found.</div>;
 
   const stadiumImage = getStadiumImage(match.venue);
+  const city = getCity(match.venue);
+  const currentStand = availableStands.find(s => s.name === selectedStand);
+  
+  const baseFare = currentStand ? currentStand.price * quantity : 0;
+  const bookingFee = selectedStand ? Math.round(baseFare * 0.05) : 0;
+  const totalAmount = baseFare + bookingFee;
 
   return (
     <div className="booking-container">
@@ -79,13 +105,13 @@ export const Booking = () => {
       <div className="booking-content">
         <div className="stadium-section">
           <div className="section-header">
-            <h4>Select Your Stand</h4>
+            <h4>Seating Area</h4>
             <div className="status-legend">
               <span className="legend-item available">Available</span>
               <span className="legend-item filling">Filling Fast</span>
-              <span className="legend-item sold-out">Sold Out</span>
             </div>
           </div>
+          
           <div className="stadium-layout-container">
             <img 
               src={`/stadiums/${stadiumImage}`} 
@@ -95,42 +121,79 @@ export const Booking = () => {
                 (e.target as HTMLImageElement).src = 'https://placehold.co/800x600/1e2130/white?text=Stadium+Layout+Incoming';
               }}
             />
-            <div className="layout-overlay">
-              <div className="instruction-box">
-                <Info size={16} />
-                <span>Hover over the stands to see pricing and availability</span>
-              </div>
-            </div>
           </div>
+
+          {availableStands.length > 0 && (
+            <div className="stands-table-container">
+              <h5>Available Stands in {city}</h5>
+              <table className="stands-table">
+                <thead>
+                  <tr>
+                    <th>Stand Name</th>
+                    <th>Price (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availableStands.map((stand, index) => (
+                    <tr key={index} className={selectedStand === stand.name ? 'selected' : ''} onClick={() => setSelectedStand(stand.name)}>
+                      <td>{stand.name}</td>
+                      <td>₹{stand.price.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="booking-sidebar">
           <div className="selection-summary">
-            <h4>Ticket Summary</h4>
-            <div className="summary-empty">
-              <Users size={48} className="empty-icon" />
-              <p>Please select a stand from the layout to proceed with booking.</p>
-            </div>
+            <h4>Select Tickets</h4>
             
+            <div className="selection-form">
+              <div className="form-group">
+                <label>Choose Stand</label>
+                <select 
+                  value={selectedStand} 
+                  onChange={(e) => setSelectedStand(e.target.value)}
+                  className="stand-select"
+                >
+                  <option value="">Select a stand</option>
+                  {availableStands.map((stand, index) => (
+                    <option key={index} value={stand.name}>{stand.name} - ₹{stand.price.toLocaleString()}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Quantity</label>
+                <div className="quantity-selector">
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
+                  <span>{quantity}</span>
+                  <button onClick={() => setQuantity(Math.min(10, quantity + 1))}>+</button>
+                </div>
+              </div>
+            </div>
+
             <div className="price-details">
               <div className="price-row">
                 <span>Base Fare</span>
-                <span>₹0</span>
+                <span>₹{baseFare.toLocaleString()}</span>
               </div>
               <div className="price-row">
-                <span>Booking Fee</span>
-                <span>₹0</span>
+                <span>Booking Fee (5%)</span>
+                <span>₹{bookingFee.toLocaleString()}</span>
               </div>
               <hr />
               <div className="price-row total">
                 <span>Total Amount</span>
-                <span>₹0</span>
+                <span>₹{totalAmount.toLocaleString()}</span>
               </div>
             </div>
 
-            <button className="checkout-btn" disabled>
+            <button className={`checkout-btn ${selectedStand ? 'active' : ''}`} disabled={!selectedStand}>
               <CreditCard size={20} />
-              <span>Proceed to Pay</span>
+              <span>Proceed to Pay ₹{totalAmount.toLocaleString()}</span>
             </button>
           </div>
 
@@ -141,7 +204,7 @@ export const Booking = () => {
               <span>{match.venue}</span>
             </div>
             <p className="stadium-note">
-              Please reach the stadium 2 hours before the match starts for a smooth entry process.
+              Please reach the stadium 2 hours before the match starts for a smooth entry process. Digital tickets must be carried for entry.
             </p>
           </div>
         </div>

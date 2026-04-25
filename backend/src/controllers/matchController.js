@@ -2,7 +2,7 @@ import pool from '../config/db.js';
 
 export const getAllMatches = async (req, res) => {
     try {
-        const [rows] = await pool.execute('SELECT id, title, team1, team2, date_time, venue FROM matches ORDER BY date_time ASC');
+        const [rows] = await pool.execute('SELECT id, title, team1, team2, date_time, venue FROM matches ORDER BY id ASC');
         res.status(200).json(rows);
     } catch (error) {
         console.error('Error fetching matches:', error.message);
@@ -34,6 +34,46 @@ export const getMatchById = async (req, res) => {
         res.status(200).json(match);
     } catch (error) {
         console.error('Error fetching match details:', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+export const getStandsByCity = async (req, res) => {
+    try {
+        const cityKey = req.params.cityKey;
+        console.log(`Backend: Fetching stands for cityKey: "${cityKey}"`);
+        const [rows] = await pool.execute('SELECT name, price FROM stands WHERE city_key = ?', [cityKey]);
+        console.log(`Backend: Found ${rows.length} stands for "${cityKey}"`);
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error fetching stands:', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+export const getStandsByMatchId = async (req, res) => {
+    try {
+        const matchId = req.params.id;
+        
+        // 1. Get the match venue
+        const [matchRows] = await pool.execute('SELECT venue FROM matches WHERE id = ?', [matchId]);
+        if (matchRows.length === 0) {
+            return res.status(404).json({ message: 'Match not found' });
+        }
+        
+        const venue = matchRows[0].venue;
+        const parts = venue.split(',');
+        const cityKey = parts[parts.length - 1].trim();
+
+        console.log(`Backend ID Fetch: Match ${matchId} -> Venue "${venue}" -> City "${cityKey}"`);
+
+        // 2. Get stands for that city
+        const [standRows] = await pool.execute('SELECT name, price FROM stands WHERE city_key = ?', [cityKey]);
+        console.log(`Backend ID Fetch: Found ${standRows.length} stands`);
+        
+        res.status(200).json(standRows);
+    } catch (error) {
+        console.error('Error fetching stands by match ID:', error.message);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };

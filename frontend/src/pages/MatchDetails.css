@@ -78,11 +78,32 @@
   color: #e5e7eb;
 }
 
-.teams-heading {
+.teams-heading-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
   font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 800;
   line-height: 1.2;
   margin: 0;
+}
+
+.team-header-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.team-logo-header {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  padding: 4px;
 }
 
 .team-highlight {
