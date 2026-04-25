@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, MapPin, ArrowRight, Layout } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight } from 'lucide-react';
 import { getTeamLogo } from '../utils/teamLogos';
 import './Matches.css';
 
@@ -18,9 +18,14 @@ export const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Get user email from localStorage
+    const savedEmail = localStorage.getItem('userEmail');
+    setUserEmail(savedEmail);
+
     const fetchMatches = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/matches');
@@ -35,6 +40,11 @@ export const Matches = () => {
     fetchMatches();
   }, []);
 
+  const getInitial = (email: string | null) => {
+    if (!email) return 'U';
+    return email.charAt(0).toUpperCase();
+  };
+
   return (
     <div className="matches-container">
       <div className="matches-blobs">
@@ -45,11 +55,24 @@ export const Matches = () => {
 
       <div className="matches-header">
         <div className="matches-logo-box">
-          <Layout className="logo-icon" />
-          <h2>IPL Ticket Portal</h2>
+          <img src="/logo/ipl.png" alt="Satrix Logo" className="header-logo" />
+          <h2 className="satrix-title">Satrix</h2>
         </div>
-        <div className="user-profile">
-          <img src="https://ui-avatars.com/api/?name=User&background=random" alt="User Profile" />
+        <div className="header-actions">
+          <div className="user-profile-circle">
+            <div className="profile-initial">{getInitial(userEmail)}</div>
+            <div className="profile-email-tooltip">{userEmail || 'User'}</div>
+          </div>
+          <button 
+            className="logout-btn" 
+            onClick={() => {
+              localStorage.removeItem('userEmail');
+              localStorage.removeItem('token');
+              navigate('/login');
+            }}
+          >
+            Logout
+          </button>
         </div>
       </div>
 
@@ -57,11 +80,14 @@ export const Matches = () => {
         <div className="title-section">
           <div className="badge">TATA IPL 2026</div>
           <h1>Upcoming Fixtures</h1>
-          <p>Book your tickets and witness the ultimate cricketing battles live.</p>
+          <p>Book your tickets and witness the ultimate cricketing battles live with Satrix.</p>
         </div>
 
         {loading ? (
-          <div className="loading-state">Loading fixtures...</div>
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading fixtures...</p>
+          </div>
         ) : (
           <>
             <div className="matches-grid">
@@ -119,5 +145,3 @@ export const Matches = () => {
     </div>
   );
 };
-
-// End of file (removed default export)
