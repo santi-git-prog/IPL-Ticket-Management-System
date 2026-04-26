@@ -52,7 +52,6 @@ export const Booking = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log('Fetching details for Match ID:', id);
         
         // 1. Fetch match info
         const matchRes = await axios.get(`http://localhost:5000/api/matches/${id}`);
@@ -60,7 +59,6 @@ export const Booking = () => {
         
         // 2. Fetch stands directly by match ID (Backend handles city mapping)
         const standsRes = await axios.get(`http://localhost:5000/api/matches/${id}/stands`);
-        console.log(`Stands loaded for Match ${id}:`, standsRes.data.length, 'stands found');
         setAvailableStands(standsRes.data);
 
       } catch (error) {

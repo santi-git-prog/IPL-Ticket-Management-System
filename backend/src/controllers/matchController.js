@@ -41,9 +41,7 @@ export const getMatchById = async (req, res) => {
 export const getStandsByCity = async (req, res) => {
     try {
         const cityKey = req.params.cityKey;
-        console.log(`Backend: Fetching stands for cityKey: "${cityKey}"`);
         const [rows] = await pool.execute('SELECT name, price FROM stands WHERE city_key = ?', [cityKey]);
-        console.log(`Backend: Found ${rows.length} stands for "${cityKey}"`);
         res.status(200).json(rows);
     } catch (error) {
         console.error('Error fetching stands:', error.message);
@@ -65,11 +63,8 @@ export const getStandsByMatchId = async (req, res) => {
         const parts = venue.split(',');
         const cityKey = parts[parts.length - 1].trim();
 
-        console.log(`Backend ID Fetch: Match ${matchId} -> Venue "${venue}" -> City "${cityKey}"`);
-
         // 2. Get stands for that city
         const [standRows] = await pool.execute('SELECT name, price FROM stands WHERE city_key = ?', [cityKey]);
-        console.log(`Backend ID Fetch: Found ${standRows.length} stands`);
         
         res.status(200).json(standRows);
     } catch (error) {

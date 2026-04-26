@@ -21,7 +21,6 @@ const Login: React.FC = () => {
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
       const response = await axios.post(`http://localhost:5000${endpoint}`, formData);
-      console.log('Success:', response.data);
       setMessage(response.data.message || 'Success!');
       
       if (isLogin) {
