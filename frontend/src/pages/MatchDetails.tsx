@@ -76,15 +76,17 @@ export const MatchDetails = () => {
       <div className="details-hero">
         <div className="hero-content">
           <div className="match-tag">{match.title}</div>
-          <div className="teams-heading-container">
-            <div className="team-header-item">
-              <img src={getTeamLogo(match.team1)} alt={match.team1} className="team-logo-header" />
-              <span className="team-highlight">{match.team1}</span> 
+          <div className="teams-heading-container" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: '1rem', width: '100%' }}>
+              <div className="team-header-item">
+                <img src={getTeamLogo(match.team1)} alt={match.team1} className="team-logo-header" />
+                <span className="team-highlight" style={{ whiteSpace: 'nowrap' }}>{match.team1}</span> 
+              </div>
+              <span className="vs-text" style={{ flexShrink: 0 }}>VS</span> 
             </div>
-            <span className="vs-text">VS</span> 
             <div className="team-header-item">
               <img src={getTeamLogo(match.team2)} alt={match.team2} className="team-logo-header" />
-              <span className="team-highlight">{match.team2}</span>
+              <span className="team-highlight" style={{ whiteSpace: 'nowrap' }}>{match.team2}</span>
             </div>
           </div>
           
@@ -104,12 +106,28 @@ export const MatchDetails = () => {
 
       <div className="details-body">
         <div className="main-content">
-          <section className="info-section">
-            <h2 className="section-title">About the Match</h2>
-            <div className="about-text">
-              {match.about_text.split('\n\n').map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
+          <section className="info-section about-section-card">
+            <h2 className="section-title">
+              <Info className="section-icon" />
+              <span>About the Match</span>
+            </h2>
+            <div className="about-text-content">
+              {match.about_text.split('\n\n').map((block, bIndex) => {
+                const lines = block.split('\n');
+                const isList = lines.every(line => /^\s*[•\-\*]/.test(line));
+                
+                if (isList) {
+                  return (
+                    <ul key={bIndex} className="about-list">
+                      {lines.map((line, lIndex) => (
+                        <li key={lIndex}>{line.replace(/^\s*[•\-\*]\s*/, '')}</li>
+                      ))}
+                    </ul>
+                  );
+                }
+                
+                return <p key={bIndex}>{block}</p>;
+              })}
             </div>
           </section>
 

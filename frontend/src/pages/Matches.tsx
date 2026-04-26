@@ -19,12 +19,17 @@ export const Matches = () => {
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [filterTeams, setFilterTeams] = useState<string[]>([]);
+  const [filterDate, setFilterDate] = useState<string>('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get user email from localStorage
+    // Get user details from localStorage
     const savedEmail = localStorage.getItem('userEmail');
+    const savedName = localStorage.getItem('username');
     setUserEmail(savedEmail);
+    setUserName(savedName);
 
     const fetchMatches = async () => {
       try {
@@ -40,9 +45,76 @@ export const Matches = () => {
     fetchMatches();
   }, []);
 
-  const getInitial = (email: string | null) => {
-    if (!email) return 'U';
-    return email.charAt(0).toUpperCase();
+  const getInitial = () => {
+    if (userName && userName.length > 0) return userName.charAt(0).toUpperCase();
+    if (userEmail && userEmail.length > 0) return userEmail.charAt(0).toUpperCase();
+    return 'U';
+  };
+
+  const uniqueTeams = Array.from(new Set(matches.flatMap(m => [m.team1, m.team2]))).sort();
+
+  const parseMatchDate = (dateString: string) => {
+    try {
+      let cleanDatePart = "";
+      
+      if (dateString.includes('-')) {
+        // Handle format like "28-MAR-26 7:30 PM"
+        const parts = dateString.split(' ');
+        cleanDatePart = parts[0]; // "28-MAR-26"
+      } else if (dateString.includes(',')) {
+        // Handle format like "Sat, 25 Apr, 3:30 PM"
+        const parts = dateString.split(',');
+        if (parts.length >= 2) {
+          cleanDatePart = parts[1].trim() + " " + new Date().getFullYear(); // "25 Apr 2026"
+        }
+      } else {
+        // Fallback for other formats
+        cleanDatePart = dateString.split(/[-|]/)[0].trim();
+      }
+
+      let parsedDate = new Date(cleanDatePart);
+      
+      // If parsing failed, try manual extraction for DD-MMM-YY
+      if (isNaN(parsedDate.getTime()) && cleanDatePart.includes('-')) {
+        const dmy = cleanDatePart.split('-');
+        if (dmy.length === 3) {
+          // Assuming DD-MMM-YY or DD-MMM-YYYY
+          parsedDate = new Date(`${dmy[1]} ${dmy[0]}, ${dmy[2].length === 2 ? '20' + dmy[2] : dmy[2]}`);
+        }
+      }
+
+      parsedDate.setHours(0, 0, 0, 0);
+      return parsedDate;
+    } catch (e) {
+      console.error("Date parsing error for:", dateString, e);
+      return new Date(NaN);
+    }
+  };
+
+  const filteredMatches = matches.filter(m => {
+    const teamMatch = filterTeams.length === 0 || filterTeams.includes(m.team1) || filterTeams.includes(m.team2);
+    
+    let dateMatch = true;
+    if (filterDate) {
+      const selectedDateObj = new Date(filterDate);
+      selectedDateObj.setHours(0, 0, 0, 0);
+      const matchDateObj = parseMatchDate(m.date_time);
+      
+      if (!isNaN(matchDateObj.getTime())) {
+        dateMatch = matchDateObj >= selectedDateObj;
+      }
+    }
+    
+    return teamMatch && dateMatch;
+  });
+
+  const toggleTeam = (team: string) => {
+    setFilterTeams(prev => 
+      prev.includes(team) 
+        ? prev.filter(t => t !== team) 
+        : [...prev, team]
+    );
+    setVisibleCount(10);
   };
 
   return (
@@ -60,13 +132,14 @@ export const Matches = () => {
         </div>
         <div className="header-actions">
           <div className="user-profile-circle">
-            <div className="profile-initial">{getInitial(userEmail)}</div>
-            <div className="profile-email-tooltip">{userEmail || 'User'}</div>
+            <div className="profile-initial">{getInitial()}</div>
+            <div className="profile-email-tooltip">{userEmail}</div>
           </div>
           <button 
             className="logout-btn" 
             onClick={() => {
               localStorage.removeItem('userEmail');
+              localStorage.removeItem('username');
               localStorage.removeItem('token');
               navigate('/login');
             }}
@@ -90,8 +163,52 @@ export const Matches = () => {
           </div>
         ) : (
           <>
+            <div className="matches-filters">
+              <div className="team-filter-section">
+                <label>Filter by Teams</label>
+                <div className="team-logos-grid">
+                  {uniqueTeams.map(team => (
+                    <div 
+                      key={team} 
+                      className={`team-logo-filter-item ${filterTeams.includes(team) ? 'active' : ''}`}
+                      onClick={() => toggleTeam(team)}
+                    >
+                      <img src={getTeamLogo(team)} alt={team} className="filter-team-logo" />
+                      <span>{team}</span>
+                    </div>
+                  ))}
+                </div>
+                {filterTeams.length > 0 && (
+                  <button className="clear-selection-link" onClick={() => setFilterTeams([])}>
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+
+              <div className="filter-group date-filter-group">
+                <label>Matches from Date</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input 
+                    type="date" 
+                    value={filterDate} 
+                    onChange={(e) => { setFilterDate(e.target.value); setVisibleCount(10); }}
+                    className="date-filter-input"
+                  />
+                  {filterDate && (
+                    <button 
+                      onClick={() => { setFilterDate(''); setVisibleCount(10); }}
+                      className="clear-date-btn"
+                      title="Clear Date Filter"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="matches-grid">
-              {matches.slice(0, visibleCount).map((match) => (
+              {filteredMatches.slice(0, visibleCount).map((match) => (
                 <div 
                   key={match.id} 
                   className="match-card" 
@@ -129,11 +246,11 @@ export const Matches = () => {
               ))}
             </div>
             
-            {visibleCount < matches.length && (
+            {visibleCount < filteredMatches.length && (
               <div className="show-more-container">
                 <button 
                   className="show-more-btn" 
-                  onClick={() => setVisibleCount(matches.length)}
+                  onClick={() => setVisibleCount(filteredMatches.length)}
                 >
                   Show More Matches
                 </button>

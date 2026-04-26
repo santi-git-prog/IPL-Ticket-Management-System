@@ -97,7 +97,10 @@ export const Booking = () => {
           <span>Back</span>
         </button>
         <div className="match-summary">
-          <h3>{match.team1} vs {match.team2}</h3>
+          <h3>
+            {match.team1} <span className="vs-text" style={{ fontSize: '0.85em', opacity: 0.8, margin: '0 4px', fontStyle: 'italic' }}>vs</span><br />
+            {match.team2}
+          </h3>
           <p>{match.date_time} | {match.venue}</p>
         </div>
       </div>
@@ -106,10 +109,6 @@ export const Booking = () => {
         <div className="stadium-section">
           <div className="section-header">
             <h4>Seating Area</h4>
-            <div className="status-legend">
-              <span className="legend-item available">Available</span>
-              <span className="legend-item filling">Filling Fast</span>
-            </div>
           </div>
           
           <div className="stadium-layout-container">

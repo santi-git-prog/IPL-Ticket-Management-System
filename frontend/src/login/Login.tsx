@@ -25,8 +25,9 @@ const Login: React.FC = () => {
       setMessage(response.data.message || 'Success!');
       
       if (isLogin) {
-        // Save user email for profile circle
+        // Save user details for profile circle
         localStorage.setItem('userEmail', response.data.user.email);
+        localStorage.setItem('username', response.data.user.username);
         localStorage.setItem('token', response.data.token);
         // Successful login -> Redirect to matches
         navigate('/matches');
@@ -114,10 +115,7 @@ const Login: React.FC = () => {
 
           {isLogin && (
             <div className="form-options">
-              <label className="remember-me">
-                <input type="checkbox" />
-                <span>Remember me</span>
-              </label>
+              <span /> {/* Spacer to keep Forgot password on the right */}
               <a href="#" className="forgot-password">Forgot password?</a>
             </div>
           )}
