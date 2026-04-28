@@ -14,6 +14,16 @@ interface Match {
   venue: string;
 }
 
+interface BookingRecord {
+  id: number;
+  match_title: string;
+  stand_name: string;
+  quantity: number;
+  total_amount: number;
+  payment_id: string;
+  created_at: string;
+}
+
 export const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +32,8 @@ export const Matches = () => {
   const [userName, setUserName] = useState<string | null>(null);
   const [filterTeams, setFilterTeams] = useState<string[]>([]);
   const [filterDate, setFilterDate] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'matches' | 'bookings'>('matches');
+  const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +56,20 @@ export const Matches = () => {
 
     fetchMatches();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'bookings' && userEmail) {
+      const fetchBookings = async () => {
+        try {
+          const response = await axios.get(`http://localhost:5000/api/payments/my-bookings?email=${userEmail}`);
+          setBookings(response.data);
+        } catch (error) {
+          console.error('Error fetching bookings:', error);
+        }
+      };
+      fetchBookings();
+    }
+  }, [activeTab, userEmail]);
 
   const getInitial = () => {
     if (userName && userName.length > 0) return userName.charAt(0).toUpperCase();
@@ -152,8 +178,27 @@ export const Matches = () => {
       <div className="matches-content">
         <div className="title-section">
           <div className="badge">TATA IPL 2026</div>
-          <h1>Upcoming Fixtures</h1>
-          <p>Book your tickets and witness the ultimate cricketing battles live with Satrix.</p>
+          <h1>{activeTab === 'matches' ? 'Upcoming Fixtures' : 'My Ticket Bookings'}</h1>
+          <p>
+            {activeTab === 'matches' 
+              ? 'Book your tickets and witness the ultimate cricketing battles live with Satrix.' 
+              : 'Managing your confirmed ticket purchases and match day details.'}
+          </p>
+        </div>
+
+        <div className="tabs-navigation">
+          <button 
+            className={`tab-btn ${activeTab === 'matches' ? 'active' : ''}`}
+            onClick={() => setActiveTab('matches')}
+          >
+            Matches
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'bookings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bookings')}
+          >
+            My Bookings
+          </button>
         </div>
 
         {loading ? (
@@ -161,7 +206,7 @@ export const Matches = () => {
             <div className="spinner"></div>
             <p>Loading fixtures...</p>
           </div>
-        ) : (
+        ) : activeTab === 'matches' ? (
           <>
             <div className="matches-filters">
               <div className="team-filter-section">
@@ -257,7 +302,60 @@ export const Matches = () => {
               </div>
             )}
           </>
-        )}
+        ) : activeTab === 'bookings' ? (
+          <div className="bookings-section">
+            {bookings.length > 0 ? (
+              <div className="bookings-table-container">
+                <table className="bookings-table">
+                  <thead>
+                    <tr>
+                      <th>Match & Seat Details</th>
+                      <th>Qty</th>
+                      <th>Amount</th>
+                      <th>Payment ID</th>
+                      <th>Booking Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((booking) => (
+                      <tr key={booking.id}>
+                        <td>
+                          <div className="booking-ticket-info">
+                            <span className="booking-match-title">{booking.match_title}</span>
+                            <span className="booking-stand">{booking.stand_name}</span>
+                          </div>
+                        </td>
+                        <td>{booking.quantity}</td>
+                        <td>
+                          <span className="booking-amount">₹{booking.total_amount.toLocaleString()}</span>
+                        </td>
+                        <td>
+                          <code style={{ fontSize: '0.75rem', opacity: 0.6 }}>{booking.payment_id}</code>
+                        </td>
+                        <td>
+                          <span className="booking-date">
+                            {new Date(booking.created_at).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-bookings-state">
+                <p>You haven't booked any tickets yet.</p>
+                <button className="show-more-btn" onClick={() => setActiveTab('matches')}>
+                  Browse Matches
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+
 import pool from './config/db.js';
 
 dotenv.config();
@@ -17,6 +19,8 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/matches', matchRoutes);
+app.use('/api/payments', paymentRoutes);
+
 
 // Root route
 app.get('/', (req, res) => {
@@ -60,31 +64,21 @@ const initDb = async () => {
             )
         `);
 
-        // Insert mock data for Delhi Capitals vs Punjab Kings
-        const mockAbout = "It’s Delhi Capitals up against Punjab Kings in a clash that could swing either way. Led by Axar Patel with an experienced batting core stacked with firepower. You’ve got KL Rahul doing his thing with the bat, backed by power hitters like Pathum Nissanka, Ben Duckett, and David Miller. The bowling pack packs a punch too, with Kuldeep Yadav, and Lungi Ngidi ready to take the shine off any big total.\\n\\nPunjab Kings aren’t here to make up the numbers. With Shreyas Iyer steering the ship, and big threats like Prabhsimran Singh, Marcus Stoinis, and Arshdeep Singh in their ranks, they can shake DC early and keep the scoreboard pressure on. If DC lose early wickets it opens the door for PBKS to pounce. But if Delhi’s experience shows and they dominate the middle overs with Axar and company, this one could tilt their way.";
-        
-        const mockHighlights = JSON.stringify([
-            { title: "Why this event stands out", description: "DC vs PBKS in TATA IPL 2026—pure adrenaline, pure madness!" },
-            { title: "What you’ll experience", description: "Sixes, chants, goosebumps—feel the stadium come ALIVE!" },
-            { title: "Get ready to", description: "Experience thunderous cheers, massive hits, and an atmosphere that sends chills through the crowd!" }
-        ]);
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS bookings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_email VARCHAR(255) NOT NULL,
+                match_id INT NOT NULL,
+                match_title VARCHAR(255) NOT NULL,
+                stand_name VARCHAR(255) NOT NULL,
+                quantity INT NOT NULL,
+                total_amount INT NOT NULL,
+                payment_id VARCHAR(255) NOT NULL,
+                order_id VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-        const checkMatch = await pool.execute('SELECT count(*) as count FROM matches WHERE id = 1');
-        if (checkMatch[0][0].count === 0) {
-            await pool.execute(`
-                INSERT INTO matches (id, title, team1, team2, date_time, venue, about_text, highlights)
-                VALUES (
-                    1, 
-                    'TATA IPL 2026: Match 35', 
-                    'Delhi Capitals', 
-                    'Punjab Kings', 
-                    'Sat, 25 Apr, 3:30 PM', 
-                    'Arun Jaitley Stadium, New Delhi',
-                    ?,
-                    ?
-                )
-            `, [mockAbout, mockHighlights]);
-        }
 
         // Seed Bangalore stands if empty
         const checkStands = await pool.execute('SELECT count(*) as count FROM stands WHERE city_key = "Bangalore"');

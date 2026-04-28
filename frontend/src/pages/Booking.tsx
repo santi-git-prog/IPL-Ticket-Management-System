@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, MapPin, Info, Users, CreditCard } from 'lucide-react';
+import { ArrowLeft, MapPin, Info, Users, CreditCard, Loader2, CheckCircle, XCircle } from 'lucide-react';
+
 import './Booking.css';
 
 interface MatchDetail {
@@ -39,6 +40,84 @@ export const Booking = () => {
   const [availableStands, setAvailableStands] = useState<{ name: string, price: number }[]>([]);
   const [selectedStand, setSelectedStand] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [paymentResult, setPaymentResult] = useState<any>(null);
+
+  const handlePayment = async () => {
+    try {
+      setPaymentStatus('loading');
+      
+      // 1. Create order on backend
+      const { data: order } = await axios.post('http://localhost:5000/api/payments/create-order', {
+        amount: totalAmount,
+        currency: 'INR'
+      });
+
+      // 2. Initialize Razorpay options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_ID', // Use fallback for testing if env not loaded
+        amount: order.amount,
+        currency: order.currency,
+        name: 'SATRIX IPL TICKETS',
+        description: `Booking for ${match.team1} vs ${match.team2}`,
+        image: '/logo/ipl.png',
+        order_id: order.id,
+        handler: async function (response: any) {
+          // Success handler
+          try {
+            // Save to database
+            await axios.post('http://localhost:5000/api/payments/save-booking', {
+              userEmail: localStorage.getItem('userEmail'),
+              matchId: match.id,
+              matchTitle: match.title,
+              standName: selectedStand,
+              quantity: quantity,
+              totalAmount: totalAmount,
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id
+            });
+
+            setPaymentResult(response);
+            setPaymentStatus('success');
+            
+            // Redirect to matches after 5 seconds
+            setTimeout(() => {
+              navigate('/matches');
+            }, 5000);
+          } catch (error) {
+            console.error('Error saving booking:', error);
+            // Even if save fails, the payment was successful, but we should inform user
+            setPaymentStatus('error');
+          }
+        },
+        prefill: {
+          name: localStorage.getItem('username') || '',
+          email: localStorage.getItem('userEmail') || '',
+        },
+        theme: {
+          color: '#6366f1',
+        },
+        modal: {
+          ondismiss: function() {
+            setPaymentStatus('idle');
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      
+      rzp.on('payment.failed', function (response: any) {
+        console.error('Payment failed:', response.error);
+        setPaymentStatus('error');
+      });
+
+      rzp.open();
+    } catch (error) {
+      console.error('Order creation error:', error);
+      setPaymentStatus('error');
+    }
+  };
+
 
   const getCity = (venue: string | undefined) => {
     if (!venue) return '';
@@ -188,11 +267,80 @@ export const Booking = () => {
               </div>
             </div>
 
-            <button className={`checkout-btn ${selectedStand ? 'active' : ''}`} disabled={!selectedStand}>
-              <CreditCard size={20} />
-              <span>Proceed to Pay ₹{totalAmount.toLocaleString()}</span>
+            <button 
+              className={`checkout-btn ${selectedStand && paymentStatus === 'idle' ? 'active' : ''}`} 
+              disabled={!selectedStand || paymentStatus !== 'idle'}
+              onClick={() => handlePayment()}
+            >
+              {paymentStatus === 'loading' ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <CreditCard size={20} />
+              )}
+              <span>{paymentStatus === 'loading' ? 'Processing...' : `Proceed to Pay ₹${totalAmount.toLocaleString()}`}</span>
             </button>
           </div>
+
+          {/* Payment Status Overlays */}
+          {paymentStatus !== 'idle' && (
+            <div className="payment-overlay">
+              {paymentStatus === 'loading' && (
+                <div className="payment-status-card">
+                  <div className="status-icon loading">
+                    <Loader2 size={40} />
+                  </div>
+                  <h2>Creating Order</h2>
+                  <p>Please wait while we set up your secure payment gateway...</p>
+                </div>
+              )}
+
+              {paymentStatus === 'success' && (
+                <div className="payment-status-card">
+                  <div className="status-icon success">
+                    <CheckCircle size={40} />
+                  </div>
+                  <h2>Payment Successful!</h2>
+                  <p>Your tickets have been booked successfully. Redirecting you shortly...</p>
+                  
+                  <div className="payment-details-box">
+                    <div className="detail-row">
+                      <span className="detail-label">Payment ID</span>
+                      <span className="detail-value">{paymentResult?.razorpay_payment_id}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Order ID</span>
+                      <span className="detail-value">{paymentResult?.razorpay_order_id}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Amount Paid</span>
+                      <span className="detail-value">₹{totalAmount.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <button className="retry-btn" onClick={() => navigate('/matches')}>
+                    Go to Dashboard
+                  </button>
+                </div>
+              )}
+
+              {paymentStatus === 'error' && (
+                <div className="payment-status-card">
+                  <div className="status-icon error">
+                    <XCircle size={40} />
+                  </div>
+                  <h2>Payment Failed</h2>
+                  <p>Something went wrong with your transaction. Please try again.</p>
+                  
+                  <button className="retry-btn" onClick={() => setPaymentStatus('idle')}>
+                    Try Again
+                  </button>
+                  <button className="close-btn" onClick={() => setPaymentStatus('idle')}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="stadium-info-box">
             <h4>Venue Information</h4>
