@@ -366,3 +366,44 @@
     height: 50px;
   }
 }
+
+/* Verification Mode Styles */
+.back-btn-minimal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: color 0.2s;
+}
+
+.back-btn-minimal:hover {
+  color: var(--primary);
+}
+
+.otp-status {
+  padding: 0.75rem;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 12px;
+  color: var(--primary);
+  font-size: 0.85rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.secondary-action {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  margin-top: 1rem;
+}
+
+.secondary-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

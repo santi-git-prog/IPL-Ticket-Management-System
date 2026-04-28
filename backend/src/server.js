@@ -79,6 +79,16 @@ const initDb = async () => {
             )
         `);
 
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS otps (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(255) NOT NULL,
+                otp VARCHAR(6) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
 
         // Seed Bangalore stands if empty
         const checkStands = await pool.execute('SELECT count(*) as count FROM stands WHERE city_key = "Bangalore"');

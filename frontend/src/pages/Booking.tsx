@@ -281,66 +281,6 @@ export const Booking = () => {
             </button>
           </div>
 
-          {/* Payment Status Overlays */}
-          {paymentStatus !== 'idle' && (
-            <div className="payment-overlay">
-              {paymentStatus === 'loading' && (
-                <div className="payment-status-card">
-                  <div className="status-icon loading">
-                    <Loader2 size={40} />
-                  </div>
-                  <h2>Creating Order</h2>
-                  <p>Please wait while we set up your secure payment gateway...</p>
-                </div>
-              )}
-
-              {paymentStatus === 'success' && (
-                <div className="payment-status-card">
-                  <div className="status-icon success">
-                    <CheckCircle size={40} />
-                  </div>
-                  <h2>Payment Successful!</h2>
-                  <p>Your tickets have been booked successfully. Redirecting you shortly...</p>
-                  
-                  <div className="payment-details-box">
-                    <div className="detail-row">
-                      <span className="detail-label">Payment ID</span>
-                      <span className="detail-value">{paymentResult?.razorpay_payment_id}</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Order ID</span>
-                      <span className="detail-value">{paymentResult?.razorpay_order_id}</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Amount Paid</span>
-                      <span className="detail-value">₹{totalAmount.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <button className="retry-btn" onClick={() => navigate('/matches')}>
-                    Go to Dashboard
-                  </button>
-                </div>
-              )}
-
-              {paymentStatus === 'error' && (
-                <div className="payment-status-card">
-                  <div className="status-icon error">
-                    <XCircle size={40} />
-                  </div>
-                  <h2>Payment Failed</h2>
-                  <p>Something went wrong with your transaction. Please try again.</p>
-                  
-                  <button className="retry-btn" onClick={() => setPaymentStatus('idle')}>
-                    Try Again
-                  </button>
-                  <button className="close-btn" onClick={() => setPaymentStatus('idle')}>
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="stadium-info-box">
             <h4>Venue Information</h4>
@@ -354,6 +294,67 @@ export const Booking = () => {
           </div>
         </div>
       </div>
+
+      {/* Payment Status Overlays */}
+      {paymentStatus !== 'idle' && (
+        <div className="payment-overlay">
+          {paymentStatus === 'loading' && (
+            <div className="payment-status-card">
+              <div className="status-icon loading">
+                <Loader2 size={40} />
+              </div>
+              <h2>Creating Order</h2>
+              <p>Please wait while we set up your secure payment gateway...</p>
+            </div>
+          )}
+
+          {paymentStatus === 'success' && (
+            <div className="payment-status-card">
+              <div className="status-icon success">
+                <CheckCircle size={40} />
+              </div>
+              <h2>Payment Successful!</h2>
+              <p>Your tickets have been booked successfully. Redirecting you shortly...</p>
+              
+              <div className="payment-details-box">
+                <div className="detail-row">
+                  <span className="detail-label">Payment ID</span>
+                  <span className="detail-value">{paymentResult?.razorpay_payment_id}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Order ID</span>
+                  <span className="detail-value">{paymentResult?.razorpay_order_id}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Amount Paid</span>
+                  <span className="detail-value">₹{totalAmount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <button className="retry-btn" onClick={() => navigate('/matches')}>
+                Go to Dashboard
+              </button>
+            </div>
+          )}
+
+          {paymentStatus === 'error' && (
+            <div className="payment-status-card">
+              <div className="status-icon error">
+                <XCircle size={40} />
+              </div>
+              <h2>Payment Failed</h2>
+              <p>Something went wrong with your transaction. Please try again.</p>
+              
+              <button className="retry-btn" onClick={() => setPaymentStatus('idle')}>
+                Try Again
+              </button>
+              <button className="close-btn" onClick={() => setPaymentStatus('idle')}>
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
