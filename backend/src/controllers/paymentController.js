@@ -37,6 +37,7 @@ export const createOrder = async (req, res) => {
 };
 
 export const saveBooking = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const { 
       userEmail, 
@@ -49,12 +50,14 @@ export const saveBooking = async (req, res) => {
       orderId 
     } = req.body;
 
-    const query = `
-      INSERT INTO bookings (user_email, match_id, match_title, stand_name, quantity, total_amount, payment_id, order_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    // USE STORED PROCEDURE (Week 5) to process booking
+    // This handles the insert into bookings AND audit_log in one call
+    const query = 'CALL sp_process_booking(?, ?, ?, ?, ?, ?, ?, ?)';
 
-    await pool.execute(query, [
+    // START TRANSACTION (Week 3 - TCL)
+    await connection.beginTransaction();
+
+    await connection.execute(query, [
       userEmail, 
       matchId, 
       matchTitle, 
@@ -65,10 +68,17 @@ export const saveBooking = async (req, res) => {
       orderId
     ]);
 
-    res.status(201).json({ message: 'Booking saved successfully' });
+    // COMMIT TRANSACTION (Week 3 - TCL)
+    await connection.commit();
+
+    res.status(201).json({ message: 'Booking saved successfully (Processed via Stored Procedure)' });
   } catch (error) {
+    // ROLLBACK TRANSACTION on error (Week 3 - TCL)
+    await connection.rollback();
     console.error('Save Booking Error:', error);
     res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  } finally {
+    connection.release();
   }
 };
 
@@ -79,8 +89,9 @@ export const getUserBookings = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
+    // USE VIEW (Week 4) and FUNCTION (Week 6) to fetch user bookings with calculated GST
     const [rows] = await pool.execute(
-      'SELECT * FROM bookings WHERE user_email = ? ORDER BY created_at DESC', 
+      'SELECT *, fn_calculate_gst(total_amount) as gst_amount FROM vw_booking_details WHERE user_email = ? ORDER BY created_at DESC', 
       [email]
     );
 
