@@ -27,8 +27,12 @@ export const MatchDetails = () => {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [minPrice, setMinPrice] = useState<number>(400);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
+    const savedAdmin = localStorage.getItem('isAdmin') === 'true';
+    setIsAdmin(savedAdmin);
+
     const fetchMatchDetails = async () => {
       try {
         setLoading(true);
@@ -98,7 +102,7 @@ export const MatchDetails = () => {
             <div className="meta-divider">|</div>
             <div className="meta-item">
               <MapPin className="meta-icon" />
-              <span>{match.venue}</span>
+              <span>{match.venue.split(',')[0].trim()}</span>
             </div>
           </div>
         </div>
@@ -156,11 +160,12 @@ export const MatchDetails = () => {
               <h3 className="price-value">₹{minPrice.toLocaleString()}</h3>
             </div>
             <button 
-              className="book-btn"
-              onClick={() => navigate(`/booking/${match.id}`)}
+              className={`book-btn ${isAdmin ? 'admin-disabled' : ''}`}
+              onClick={() => !isAdmin && navigate(`/booking/${match.id}`)}
+              disabled={isAdmin}
             >
-              <span>Book Tickets</span>
-              <ChevronRight size={20} />
+              <span>{isAdmin ? 'Admin View Only' : 'Book Tickets'}</span>
+              {!isAdmin && <ChevronRight size={20} />}
             </button>
           </div>
 

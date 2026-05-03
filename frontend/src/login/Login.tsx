@@ -59,6 +59,7 @@ const Login: React.FC = () => {
         });
         localStorage.setItem('userEmail', response.data.user.email);
         localStorage.setItem('username', response.data.user.username);
+        localStorage.setItem('isAdmin', response.data.user.isAdmin ? 'true' : 'false');
         localStorage.setItem('token', response.data.token);
         navigate('/matches');
       } else if (mode === 'verify-otp') {

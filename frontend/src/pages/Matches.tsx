@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, MapPin, ArrowRight } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Trash2 } from 'lucide-react';
 import { getTeamLogo } from '../utils/teamLogos';
 import './Matches.css';
 
@@ -22,6 +22,19 @@ interface BookingRecord {
   total_amount: number;
   payment_id: string;
   created_at: string;
+  user_email?: string;
+  stadium_name?: string;
+  stadium_city?: string;
+}
+
+interface BookingSummary {
+  match_id: number;
+  match_title: string;
+  stadium_name: string;
+  stadium_city: string;
+  total_bookings: number;
+  total_tickets_sold: number;
+  total_revenue: number;
 }
 
 export const Matches = () => {
@@ -30,18 +43,25 @@ export const Matches = () => {
   const [visibleCount, setVisibleCount] = useState(10);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [filterTeams, setFilterTeams] = useState<string[]>([]);
   const [filterDate, setFilterDate] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'matches' | 'bookings'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'bookings' | 'admin'>('matches');
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
+  const [adminSummary, setAdminSummary] = useState<BookingSummary[]>([]);
+  const [allBookings, setAllBookings] = useState<BookingRecord[]>([]);
+  const [adminTab, setAdminTab] = useState<'summary' | 'details' | 'match'>('summary');
+  const [selectedMatchTitle, setSelectedMatchTitle] = useState<string>('');
   const navigate = useNavigate();
 
   useEffect(() => {
     // Get user details from localStorage
     const savedEmail = localStorage.getItem('userEmail');
     const savedName = localStorage.getItem('username');
+    const savedAdmin = localStorage.getItem('isAdmin') === 'true';
     setUserEmail(savedEmail);
     setUserName(savedName);
+    setIsAdmin(savedAdmin);
 
     const fetchMatches = async () => {
       try {
@@ -69,7 +89,69 @@ export const Matches = () => {
       };
       fetchBookings();
     }
-  }, [activeTab, userEmail]);
+
+    if (activeTab === 'admin' && isAdmin) {
+      const fetchAdminData = async () => {
+        try {
+          if (adminTab === 'summary') {
+            const res = await axios.get('http://localhost:5000/api/admin/booking-summary');
+            setAdminSummary(res.data);
+          } else if (adminTab === 'details') {
+            const res = await axios.get('http://localhost:5000/api/admin/booking-details');
+            setAllBookings(res.data);
+          }
+        } catch (error) {
+          console.error('Error fetching admin data:', error);
+        }
+      };
+      fetchAdminData();
+    }
+  }, [activeTab, userEmail, isAdmin, adminTab]);
+
+  const handleAdminMatchClick = async (matchId: number, matchTitle: string) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`http://localhost:5000/api/admin/match-bookings/${matchId}`);
+      setAllBookings(res.data);
+      setSelectedMatchTitle(matchTitle);
+      setActiveTab('admin');
+      setAdminTab('match');
+    } catch (error) {
+      console.error('Error fetching specific match bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: number) => {
+    if (!window.confirm('Are you sure you want to delete this booking? This action cannot be undone and will update the match revenue summary.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:5000/api/admin/bookings/${bookingId}`);
+      
+      // Refresh the data based on current view
+      if (adminTab === 'details') {
+        const res = await axios.get('http://localhost:5000/api/admin/booking-details');
+        setAllBookings(res.data);
+      } else if (adminTab === 'match') {
+        // Find the match ID from one of the existing bookings if possible, or we need to track it
+        // For now, let's just refresh all bookings if match tab is active
+        const res = await axios.get('http://localhost:5000/api/admin/booking-details');
+        setAllBookings(res.data);
+      }
+      
+      // Also refresh summary since it will change
+      const summaryRes = await axios.get('http://localhost:5000/api/admin/booking-summary');
+      setAdminSummary(summaryRes.data);
+      
+      alert('Booking deleted successfully');
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      alert('Failed to delete booking');
+    }
+  };
 
   const getInitial = () => {
     if (userName && userName.length > 0) return userName.charAt(0).toUpperCase();
@@ -166,6 +248,7 @@ export const Matches = () => {
             onClick={() => {
               localStorage.removeItem('userEmail');
               localStorage.removeItem('username');
+              localStorage.removeItem('isAdmin');
               localStorage.removeItem('token');
               navigate('/login');
             }}
@@ -193,12 +276,22 @@ export const Matches = () => {
           >
             Matches
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'bookings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bookings')}
-          >
-            My Bookings
-          </button>
+          {!isAdmin && (
+            <button 
+              className={`tab-btn ${activeTab === 'bookings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('bookings')}
+            >
+              My Bookings
+            </button>
+          )}
+          {isAdmin && (
+            <button 
+              className={`tab-btn ${activeTab === 'admin' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin')}
+            >
+              Admin Dashboard
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -256,8 +349,9 @@ export const Matches = () => {
               {filteredMatches.slice(0, visibleCount).map((match) => (
                 <div 
                   key={match.id} 
-                  className="match-card" 
-                  onClick={() => navigate(`/matches/${match.id}`)}
+                  className={`match-card ${isAdmin ? 'admin-mode' : ''}`} 
+                  onClick={() => isAdmin ? handleAdminMatchClick(match.id, match.title) : navigate(`/matches/${match.id}`)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="match-card-top">
                     <span className="match-title">{match.title}</span>
@@ -280,11 +374,11 @@ export const Matches = () => {
                     </div>
                     <div className="detail-item">
                       <MapPin size={16} className="detail-icon" />
-                      <span>{match.venue}</span>
+                      <span>{match.venue.split(',')[0].trim()}</span>
                     </div>
                   </div>
                   <div className="match-action">
-                    <span>View Details & Book</span>
+                    <span>{isAdmin ? 'View Match Analytics' : 'View Details & Book'}</span>
                     <ArrowRight size={18} className="action-icon" />
                   </div>
                 </div>
@@ -352,6 +446,108 @@ export const Matches = () => {
                 <button className="show-more-btn" onClick={() => setActiveTab('matches')}>
                   Browse Matches
                 </button>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'admin' ? (
+          <div className="admin-section">
+            <div className="admin-tabs">
+              <button 
+                className={`admin-sub-tab ${adminTab === 'summary' ? 'active' : ''}`}
+                onClick={() => setAdminTab('summary')}
+              >
+                Booking Summary
+              </button>
+              <button 
+                className={`admin-sub-tab ${adminTab === 'details' ? 'active' : ''}`}
+                onClick={() => setAdminTab('details')}
+              >
+                All Bookings
+              </button>
+              {adminTab === 'match' && (
+                <button className="admin-sub-tab active">
+                  Bookings for {selectedMatchTitle}
+                </button>
+              )}
+            </div>
+
+            {adminTab === 'summary' ? (
+              <div className="bookings-table-container">
+                <table className="bookings-table">
+                  <thead>
+                    <tr>
+                      <th>Match Details</th>
+                      <th>Stadium</th>
+                      <th>Bookings</th>
+                      <th>Tickets</th>
+                      <th>Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminSummary.map((item) => (
+                      <tr key={item.match_id}>
+                        <td><strong>{item.match_title}</strong></td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span>{item.stadium_name}</span>
+                            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{item.stadium_city}</span>
+                          </div>
+                        </td>
+                        <td>{item.total_bookings}</td>
+                        <td>{item.total_tickets_sold}</td>
+                        <td><span className="booking-amount">₹{item.total_revenue.toLocaleString()}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="bookings-table-container">
+                {adminTab === 'match' && (
+                  <div className="match-filter-indicator">
+                    <span>Showing bookings only for: <strong>{selectedMatchTitle}</strong></span>
+                    <button onClick={() => setAdminTab('summary')} className="clear-match-filter">View All Matches</button>
+                  </div>
+                )}
+                <table className="bookings-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Match & Stand</th>
+                      <th>Qty</th>
+                      <th>Amount</th>
+                      <th>Payment ID</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allBookings.map((booking) => (
+                      <tr key={booking.id}>
+                        <td><span style={{ fontSize: '0.85rem' }}>{booking.user_email}</span></td>
+                        <td>
+                          <div className="booking-ticket-info">
+                            <span className="booking-match-title">{booking.match_title}</span>
+                            <span className="booking-stand">{booking.stand_name}</span>
+                          </div>
+                        </td>
+                        <td>{booking.quantity}</td>
+                        <td><span className="booking-amount">₹{booking.total_amount.toLocaleString()}</span></td>
+                        <td><code style={{ fontSize: '0.75rem' }}>{booking.payment_id}</code></td>
+                        <td>{new Date(booking.created_at).toLocaleDateString()}</td>
+                        <td>
+                          <button 
+                            className="admin-delete-btn"
+                            onClick={() => handleDeleteBooking(booking.id)}
+                            title="Delete Booking"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 import pool from './config/db.js';
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // Root route
@@ -36,9 +38,17 @@ const initDb = async () => {
                 username VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Ensure is_admin exists for existing tables
+        try {
+            await pool.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE AFTER password");
+        } catch (err) {
+            // Column already exists, ignore error
+        }
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS matches (
@@ -118,10 +128,37 @@ const initDb = async () => {
         await pool.execute(`
             CREATE OR REPLACE VIEW vw_booking_details AS
             SELECT 
-                b.id, b.user_email, m.title as match_name, b.stand_name, 
-                b.quantity, b.total_amount, b.created_at 
+                b.id, 
+                b.user_email, 
+                b.match_title, 
+                b.stand_name, 
+                b.quantity, 
+                b.total_amount, 
+                b.payment_id,
+                b.order_id,
+                s.name as stadium_name,
+                s.city as stadium_city,
+                b.created_at 
             FROM bookings b
             JOIN matches m ON b.match_id = m.id
+            LEFT JOIN stadiums s ON (m.venue LIKE CONCAT('%', s.name, '%') OR m.venue = s.city)
+        `);
+
+        // 2. VIEW: Aggregated booking summary (Week 4)
+        await pool.execute(`
+            CREATE OR REPLACE VIEW vw_booking_summary AS
+            SELECT 
+                m.id as match_id,
+                m.title as match_title,
+                s.name as stadium_name,
+                s.city as stadium_city,
+                COUNT(b.id) as total_bookings,
+                IFNULL(SUM(b.quantity), 0) as total_tickets_sold,
+                IFNULL(SUM(b.total_amount), 0) as total_revenue
+            FROM matches m
+            LEFT JOIN stadiums s ON (m.venue LIKE CONCAT('%', s.name, '%') OR m.venue = s.city)
+            LEFT JOIN bookings b ON m.id = b.match_id
+            GROUP BY m.id, m.title, s.name, s.city
         `);
 
         // 2. FUNCTIONS (Week 6)
@@ -175,8 +212,59 @@ const initDb = async () => {
                 END
             `);
         } catch (e) { console.log("❌ Trigger tr_audit_match_update creation failed:", e.message); }
+
+        // 5. TRIGGER: Audit Booking Deletion
+        try {
+            await pool.query("DROP TRIGGER IF EXISTS tr_audit_booking_delete");
+            await pool.query(`
+                CREATE TRIGGER tr_audit_booking_delete
+                AFTER DELETE ON bookings
+                FOR EACH ROW
+                BEGIN
+                    INSERT INTO audit_log (action_type, table_name, record_id, user_email, details)
+                    VALUES ('DELETE_BOOKING', 'bookings', OLD.id, OLD.user_email, CONCAT('Deleted booking for ', OLD.match_title));
+                END
+            `);
+        } catch (e) { console.log("❌ Trigger tr_audit_booking_delete creation failed:", e.message); }
+
         console.log('✅ All DB concepts checked/created');
 
+        // Set Default Admin (Wrapped in try-catch to prevent server crash if column missing)
+        try {
+            await pool.execute('UPDATE users SET is_admin = TRUE WHERE email = ?', ['sanjithsvpm@gmail.com']);
+            console.log('👑 Admin privileges checked for sanjithsvpm@gmail.com');
+        } catch (e) { 
+            console.log("⚠️ Could not set admin status (is_admin column might be missing):", e.message); 
+        }
+
+
+        // Seed Stadiums: Safe "Check and Add" approach to avoid Foreign Key violations
+        const stadiumsList = [
+            ['M. Chinnaswamy Stadium', 'Bangalore', 35000],
+            ['MA Chidambaram Stadium', 'Chennai', 38000],
+            ['Wankhede Stadium', 'Mumbai', 33000],
+            ['Arun Jaitley Stadium', 'Delhi', 35000],
+            ['Eden Gardens', 'Kolkata', 66000],
+            ['Narendra Modi Stadium', 'Ahmedabad', 132000],
+            ['Rajiv Gandhi International Stadium', 'Hyderabad', 39000],
+            ['BRSABV Ekana Cricket Stadium', 'Lucknow', 50000],
+            ['Sawai Mansingh Stadium', 'Jaipur', 30000],
+            ['HPCA Stadium', 'Dharamshala', 23000],
+            ['Barsapara Cricket Stadium', 'Guwahati', 40000],
+            ['Maharaja Yadavindra Singh Cricket Stadium', 'New Chandigarh', 38000],
+            ['Shaheed Veer Narayan Singh International Stadium', 'Raipur', 65000]
+        ];
+
+        for (const stadium of stadiumsList) {
+            const [exists] = await pool.execute('SELECT stadium_id FROM stadiums WHERE name = ?', [stadium[0]]);
+            if (exists.length === 0) {
+                await pool.execute(
+                    'INSERT INTO stadiums (name, city, capacity) VALUES (?, ?, ?)',
+                    stadium
+                );
+            }
+        }
+        console.log('✅ Stadium check/seed complete');
 
         // Seed Bangalore stands if empty
         const checkStands = await pool.execute('SELECT count(*) as count FROM stands WHERE city_key = "Bangalore"');

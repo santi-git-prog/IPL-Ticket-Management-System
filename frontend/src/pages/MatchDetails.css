@@ -341,13 +341,21 @@
   box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
 }
 
-.book-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(99, 102, 241, 0.4);
-}
-
 .book-btn:active {
   transform: translateY(1px);
+}
+
+.book-btn.admin-disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: #64748b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: default;
+  box-shadow: none;
+}
+
+.book-btn.admin-disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .things-to-know {

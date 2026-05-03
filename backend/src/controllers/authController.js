@@ -118,7 +118,12 @@ export const login = async (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, username: user.username, email: user.email }
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        email: user.email,
+        isAdmin: !!(user && user.is_admin)
+      }
     });
   } catch (error) {
     console.error('Login Error:', error);

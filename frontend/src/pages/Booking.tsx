@@ -12,6 +12,7 @@ interface MatchDetail {
   team2: string;
   date_time: string;
   venue: string;
+  city?: string;
 }
 
 const stadiumImageMap: { [key: string]: string } = {
@@ -119,12 +120,12 @@ export const Booking = () => {
   };
 
 
-  const getCity = (venue: string | undefined) => {
-    if (!venue) return '';
-    // Handle both comma-separated and simple city names
-    const parts = venue.split(',');
-    const city = parts[parts.length - 1].trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
-    return city;
+  const getCity = (m: MatchDetail | null) => {
+    if (!m) return '';
+    if (m.city) return m.city;
+    // Fallback for old data
+    const parts = m.venue.split(',');
+    return parts[parts.length - 1].trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
   };
 
   useEffect(() => {
@@ -150,16 +151,16 @@ export const Booking = () => {
     fetchData();
   }, [id]);
 
-  const getStadiumImage = (venue: string) => {
-    const city = getCity(venue);
+  const getStadiumImage = (m: MatchDetail) => {
+    const city = getCity(m);
     return stadiumImageMap[city] || 'default-stadium.jpg';
   };
 
   if (loading) return <div className="booking-loading">Loading booking details...</div>;
   if (!match) return <div className="booking-error">Match not found.</div>;
 
-  const stadiumImage = getStadiumImage(match.venue);
-  const city = getCity(match.venue);
+  const stadiumImage = getStadiumImage(match);
+  const city = getCity(match);
   const currentStand = availableStands.find(s => s.name === selectedStand);
   
   const baseFare = currentStand ? currentStand.price * quantity : 0;
