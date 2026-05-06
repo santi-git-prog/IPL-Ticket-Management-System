@@ -1,7 +1,7 @@
 # IPL Ticket Management System - Project Report
 
 ## 1. Intro
-The **IPL Ticket Management System** is a comprehensive full-stack web application designed to streamline the process of booking tickets for Indian Premier League (IPL) matches. It provides a seamless experience for cricket fans to browse upcoming matches, view detailed information about venues and teams, select specific stands based on pricing, and complete secure transactions. The system integrates modern web technologies with robust database management concepts to ensure data integrity, security, and a premium user experience.
+The **IPL Ticket Management System** is a comprehensive full-stack web application designed to streamline the process of booking tickets for Indian Premier League (IPL) matches. It provides a seamless experience for cricket fans to browse upcoming matches, view detailed information about venues and teams, select specific stands based on pricing, and complete secure transactions. The system integrates modern web technologies with robust database management concepts to ensure data integrity, security, and a premium user experience, while providing comprehensive administrative oversight.
 
 ---
 
@@ -25,7 +25,9 @@ The IPL Ticket Management System addresses these by providing a modern, fast, an
 3. **Stand Selection**: Users can view different stands available at the stadium with corresponding ticket prices.
 4. **Booking & Payment**: Integration with Razorpay for secure payments and a transactional booking process.
 5. **Booking History**: Users can view their past bookings with detailed summaries.
-6. **Audit Logging**: Automatic logging of critical actions like bookings and match updates for administrative tracking.
+6. **Admin Dashboard**: A secure interface for administrators to monitor system performance, analyze revenue, and manage ticket bookings.
+7. **Booking Management**: Administrators can view global booking details and delete records to resolve conflicts or handle cancellations.
+8. **Audit Logging**: Automatic logging of critical actions like bookings, match updates, and deletions for administrative tracking.
 
 ### Non-Functional Requirements
 1. **Security**: Use of **BCrypt** for password encryption, **JWT** for session management, and **TCL (Transactions)** for database consistency.
@@ -80,6 +82,7 @@ erDiagram
         string username "Required"
         string email UK "Unique Identifier"
         string password "Hashed"
+        boolean is_admin "Role Flag"
         timestamp created_at
     }
 
@@ -145,7 +148,8 @@ erDiagram
 - **STADIUM & STAND**: Represents the physical venues. A Stadium contains multiple Stands. The `stadiums` table acts as a master reference for all IPL venues (Bangalore, Chennai, Mumbai, etc.), storing names, cities, and capacities. This ensures that match venues are standardized and linked to their respective cities for pricing.
 - **BOOKING**: A transactional entity that links a User to a Match and a specific Stand. It captures payment metadata (`payment_id`, `order_id`) to ensure financial traceability.
 - **OTP**: A temporary entity used for security. It has a 1-to-many relationship with the user email (a user can request multiple OTPs over time).
-- **AUDIT_LOG**: A tracking entity that captures system changes. It is populated via **Database Triggers** and **Stored Procedures**.
+- **AUDIT_LOG**: A tracking entity that captures system changes. It is populated via **Database Triggers** and **Stored Procedures**, capturing insertions, updates, and deletions.
+- **ADMIN CONTROLS**: While not a separate entity, the `is_admin` flag in the `USER` entity enables access to restricted views and management functionalities.
 
 #### 2. Key Relationships and Cardinality
 - **User to Booking (1:N)**: A single user can place multiple bookings over time, but each booking belongs to exactly one user.
@@ -164,7 +168,7 @@ erDiagram
 
 ## 6. Relational Model
 The database is structured as follows:
-- **users** (`id`, `username`, `email`, `password`, `created_at`)
+- **users** (`id`, `username`, `email`, `password`, `is_admin`, `created_at`)
 - **matches** (`id`, `title`, `team1`, `team2`, `date_time`, `venue`, `about_text`, `highlights`)
 - **stands** (`id`, `city_key`, `name`, `price`)
 - **bookings** (`id`, `user_email`, `match_id`, `match_title`, `stand_name`, `quantity`, `total_amount`, `payment_id`, `order_id`, `created_at`)
@@ -192,6 +196,7 @@ CREATE TABLE users (
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -220,20 +225,25 @@ CREATE TABLE bookings (
 
 ## 9. Implementation
 
-### Database Concepts Integration
+### Backend & DB Concepts Integration
 The project implements advanced SQL concepts to enhance functionality:
 - **Stored Procedures**: `sp_process_booking` handles the multi-step process of saving a booking and creating an audit log entry in a single atomic call.
-- **Triggers**: `tr_audit_match_update` automatically logs any changes made to match details (like venue changes) into the `audit_log` table.
+- **Triggers**: 
+    - `tr_audit_match_update`: Automatically logs any changes made to match details into the `audit_log` table.
+    - `tr_audit_booking_delete`: Ensures that every time a booking is deleted by an admin, a record of the deletion (including actor and match details) is preserved in the audit log.
 - **Views**: 
-    - `vw_booking_details`: Provides a granular view of every booking, including user info, match info, and stadium details. Used for user booking history.
-    - `vw_booking_summary`: An aggregated view showing total tickets sold and revenue per match. Used for high-level management reporting.
+    - `vw_booking_details`: Provides a granular view of every booking, including user info, match info, and stadium details. Used for both user history and administrative auditing.
+    - `vw_booking_summary`: An aggregated view showing total bookings, tickets sold, and revenue per match, enabling real-time business intelligence for admins.
 - **Functions**: `fn_calculate_gst` is used to dynamically calculate a 18% GST on booking amounts during data retrieval.
 - **Transactions (TCL)**: All booking operations use `START TRANSACTION`, `COMMIT`, and `ROLLBACK` to ensure no partial data is saved if a failure occurs.
 
 ### Frontend Features
+- **Admin Dashboard**: A specialized view for administrators featuring revenue analytics, ticket sales tracking, and global booking management tools.
 - **Responsive Logo Grid**: Users can filter matches by clicking on team logos.
+- **Date Filtering**: Advanced match filtering allows users and admins to view fixtures scheduled from a specific date onwards.
 - **Glassmorphic UI**: High-end aesthetic with blurred backgrounds and vibrant gradients.
 - **Dynamic Routing**: Uses React Router for smooth navigation between matches, details, and booking pages.
+- **Role-Based Navigation**: The interface dynamically adjusts its navigation tabs based on whether the logged-in user has administrative privileges.
 
 ---
 

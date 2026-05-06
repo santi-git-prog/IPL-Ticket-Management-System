@@ -16,7 +16,7 @@ interface MatchDetail {
 }
 
 const stadiumImageMap: { [key: string]: string } = {
-  'Bangalore': 'Bangalore.jpeg',
+  'Bangalore': 'Bangalore.jpg',
   'Chennai': 'Chennai.png',
   'Delhi': 'Delhi.jpg',
   'New Delhi': 'Delhi.jpg',

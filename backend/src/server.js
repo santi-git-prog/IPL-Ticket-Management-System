@@ -26,7 +26,7 @@ app.use('/api/admin', adminRoutes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.send('IPL Ticket Management System API is running...');
+    res.send('IPL Ticket Management System API is running...');
 });
 
 // Initialization: Create users table if not exists
@@ -233,8 +233,8 @@ const initDb = async () => {
         try {
             await pool.execute('UPDATE users SET is_admin = TRUE WHERE email = ?', ['sanjithsvpm@gmail.com']);
             console.log('👑 Admin privileges checked for sanjithsvpm@gmail.com');
-        } catch (e) { 
-            console.log("⚠️ Could not set admin status (is_admin column might be missing):", e.message); 
+        } catch (e) {
+            console.log("⚠️ Could not set admin status (is_admin column might be missing):", e.message);
         }
 
 
@@ -285,7 +285,7 @@ const initDb = async () => {
                 ['Bangalore', 'Syed Kirmani Stand P Corporate', 25000],
                 ['Bangalore', 'GR Vishwanath Stand P2', 42000],
             ];
-            
+
             for (const stand of bangaloreStands) {
                 await pool.execute(
                     'INSERT INTO stands (city_key, name, price) VALUES (?, ?, ?)',
@@ -301,6 +301,6 @@ const initDb = async () => {
 };
 
 app.listen(PORT, async () => {
-  await initDb();
-  console.log(`Server running on http://localhost:${PORT}`);
+    await initDb();
+    console.log(`Server running on http://localhost:${PORT}`);
 });

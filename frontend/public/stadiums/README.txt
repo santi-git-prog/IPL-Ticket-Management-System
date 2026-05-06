@@ -1,6 +1,6 @@
 Please place the stadium images in this folder with the following filenames:
 
-- Bangalore.jpeg
+- Bangalore.jpg
 - Chennai.png
 - Delhi.jpg
 - dharamshala.png
