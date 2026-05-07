@@ -6,7 +6,7 @@ import { getTeamLogo } from '../utils/teamLogos';
 import './Matches.css';
 
 interface Match {
-  id: number;
+  match_id: number;
   title: string;
   team1: string;
   team2: string;
@@ -15,7 +15,7 @@ interface Match {
 }
 
 interface BookingRecord {
-  id: number;
+  booking_id: number;
   match_title: string;
   stand_name: string;
   quantity: number;
@@ -369,11 +369,11 @@ export const Matches = () => {
 
                   return (
                     <div 
-                      key={match.id} 
+                      key={match.match_id} 
                       className={`match-card ${isAdmin ? 'admin-mode' : ''} ${isPast ? 'past-match' : ''} ${isUpcoming ? 'upcoming-match' : ''}`} 
                       onClick={() => {
                         if ((isPast || isUpcoming) && !isAdmin) return;
-                        isAdmin ? handleAdminMatchClick(match.id, match.title) : navigate(`/matches/${match.id}`)
+                        isAdmin ? handleAdminMatchClick(match.match_id, match.title) : navigate(`/matches/${match.match_id}`)
                       }}
                       style={{ cursor: ((isPast || isUpcoming) && !isAdmin) ? 'default' : 'pointer' }}
                     >
@@ -472,7 +472,7 @@ export const Matches = () => {
                   </thead>
                   <tbody>
                     {bookings.map((booking) => (
-                      <tr key={booking.id}>
+                      <tr key={booking.booking_id}>
                         <td>
                           <div className="booking-ticket-info">
                             <span className="booking-match-title">{booking.match_title}</span>
@@ -612,7 +612,7 @@ export const Matches = () => {
                   </thead>
                   <tbody>
                     {allBookings.map((booking) => (
-                      <tr key={booking.id}>
+                      <tr key={booking.booking_id}>
                         <td><span style={{ fontSize: '0.85rem' }}>{booking.user_email}</span></td>
                         <td>
                           <div className="booking-ticket-info">

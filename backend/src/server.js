@@ -29,12 +29,52 @@ app.get('/', (req, res) => {
     res.send('IPL Ticket Management System API is running...');
 });
 
-// Initialization: Create users table if not exists
+// Initialization: Create tables with new primary key names
 const initDb = async () => {
     try {
+        // Migration: Rename columns if they exist as 'id'
+        const renameColumn = async (table, oldName, newName) => {
+            try {
+                // 1. Check if table and column exist using INFORMATION_SCHEMA (more reliable with placeholders)
+                const [cols] = await pool.execute(
+                    `SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLUMN_TYPE 
+                     FROM INFORMATION_SCHEMA.COLUMNS 
+                     WHERE TABLE_NAME = ? AND COLUMN_NAME = ? AND TABLE_SCHEMA = DATABASE()`,
+                    [table, oldName]
+                );
+
+                if (cols.length > 0) {
+                    console.log(`🔄 Attempting to rename ${table}.${oldName} to ${newName}...`);
+                    try {
+                        // Try standard RENAME COLUMN (MySQL 8.0+)
+                        await pool.execute(`ALTER TABLE ${table} RENAME COLUMN ${oldName} TO ${newName}`);
+                        console.log(`✅ Success: Renamed ${table}.${oldName} to ${newName}`);
+                    } catch (renameErr) {
+                        // Fallback: Use CHANGE for older MySQL versions (5.7 and below)
+                        const col = cols[0];
+                        const definition = `${col.COLUMN_TYPE} ${col.IS_NULLABLE === 'NO' ? 'NOT NULL' : ''} ${col.EXTRA}`;
+                        await pool.execute(`ALTER TABLE ${table} CHANGE ${oldName} ${newName} ${definition}`);
+                        console.log(`✅ Success (via CHANGE): Renamed ${table}.${oldName} to ${newName}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`❌ Migration failed for ${table}:`, err.message);
+            }
+        };
+
+        console.log('🚀 Starting Database Migrations...');
+        // Note: Run these sequentially and wait for each to finish
+        await renameColumn('users', 'id', 'user_id');
+        await renameColumn('matches', 'id', 'match_id');
+        await renameColumn('stands', 'id', 'stand_id');
+        await renameColumn('bookings', 'id', 'booking_id');
+        await renameColumn('otps', 'id', 'otp_id');
+        await renameColumn('audit_log', 'log_id', 'audit_log_id');
+        console.log('🏁 Migrations Checked.');
+
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
@@ -46,13 +86,11 @@ const initDb = async () => {
         // Ensure is_admin exists for existing tables
         try {
             await pool.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE AFTER password");
-        } catch (err) {
-            // Column already exists, ignore error
-        }
+        } catch (err) { /* ignore */ }
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS matches (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                match_id INT AUTO_INCREMENT PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
                 team1 VARCHAR(255) NOT NULL,
                 team2 VARCHAR(255) NOT NULL,
@@ -66,7 +104,7 @@ const initDb = async () => {
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS stands (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                stand_id INT AUTO_INCREMENT PRIMARY KEY,
                 city_key VARCHAR(255) NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 price INT NOT NULL,
@@ -78,13 +116,11 @@ const initDb = async () => {
         // Ensure capacity column exists for existing tables
         try {
             await pool.execute("ALTER TABLE stands ADD COLUMN capacity INT DEFAULT 500 AFTER price");
-        } catch (err) {
-            // Column already exists, ignore error
-        }
+        } catch (err) { /* ignore */ }
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS bookings (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                booking_id INT AUTO_INCREMENT PRIMARY KEY,
                 user_email VARCHAR(255) NOT NULL,
                 match_id INT NOT NULL,
                 match_title VARCHAR(255) NOT NULL,
@@ -99,14 +135,13 @@ const initDb = async () => {
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS otps (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                otp_id INT AUTO_INCREMENT PRIMARY KEY,
                 email VARCHAR(255) NOT NULL,
                 otp VARCHAR(6) NOT NULL,
                 expires_at DATETIME NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS stadiums (
@@ -120,7 +155,7 @@ const initDb = async () => {
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS audit_log (
-                log_id INT AUTO_INCREMENT PRIMARY KEY,
+                audit_log_id INT AUTO_INCREMENT PRIMARY KEY,
                 action_type VARCHAR(50),
                 table_name VARCHAR(50),
                 record_id INT,
@@ -136,7 +171,7 @@ const initDb = async () => {
         await pool.execute(`
             CREATE OR REPLACE VIEW vw_booking_details AS
             SELECT 
-                b.id, 
+                b.booking_id, 
                 b.user_email, 
                 b.match_title, 
                 b.stand_name, 
@@ -148,28 +183,28 @@ const initDb = async () => {
                 s.city as stadium_city,
                 b.created_at 
             FROM bookings b
-            JOIN matches m ON b.match_id = m.id
+            JOIN matches m ON b.match_id = m.match_id
             LEFT JOIN stadiums s ON (m.venue LIKE CONCAT('%', s.name, '%') OR m.venue = s.city)
         `);
 
-        // 2. VIEW: Aggregated booking summary (Week 4)
+        // 2. VIEW: Aggregated booking summary
         await pool.execute(`
             CREATE OR REPLACE VIEW vw_booking_summary AS
             SELECT 
-                m.id as match_id,
+                m.match_id,
                 m.title as match_title,
                 s.name as stadium_name,
                 s.city as stadium_city,
-                COUNT(b.id) as total_bookings,
+                COUNT(b.booking_id) as total_bookings,
                 IFNULL(SUM(b.quantity), 0) as total_tickets_sold,
                 IFNULL(SUM(b.total_amount), 0) as total_revenue
             FROM matches m
             LEFT JOIN stadiums s ON (m.venue LIKE CONCAT('%', s.name, '%') OR m.venue = s.city)
-            LEFT JOIN bookings b ON m.id = b.match_id
-            GROUP BY m.id, m.title, s.name, s.city
+            LEFT JOIN bookings b ON m.match_id = b.match_id
+            GROUP BY m.match_id, m.title, s.name, s.city
         `);
 
-        // 2. FUNCTIONS (Week 6)
+        // 3. FUNCTIONS
         try {
             await pool.query(`DROP FUNCTION IF EXISTS fn_calculate_gst`);
             await pool.query(`
@@ -180,9 +215,9 @@ const initDb = async () => {
                     RETURN amount * 0.18;
                 END
             `);
-        } catch (e) { console.log('❌ Function fn_calculate_gst creation failed:', e.message); }
+        } catch (e) { console.log('❌ Function fn_calculate_gst failed:', e.message); }
 
-        // 3. STORED PROCEDURE: Handle Booking Workflow
+        // 4. STORED PROCEDURE: Handle Booking Workflow
         try {
             await pool.query("DROP PROCEDURE IF EXISTS sp_process_booking");
             await pool.query(`
@@ -204,10 +239,9 @@ const initDb = async () => {
                     VALUES ('BOOKING', 'bookings', LAST_INSERT_ID(), p_user_email, CONCAT('Booked ', p_quantity, ' tickets for ', p_match_title));
                 END
             `);
-            console.log('✅ Stored Procedure sp_process_booking created');
-        } catch (e) { console.log("❌ Procedure sp_process_booking creation failed:", e.message); }
+        } catch (e) { console.log("❌ Procedure sp_process_booking failed:", e.message); }
 
-        // 4. TRIGGER: Audit Match Updates
+        // 5. TRIGGER: Audit Match Updates
         try {
             await pool.query("DROP TRIGGER IF EXISTS tr_audit_match_update");
             await pool.query(`
@@ -216,12 +250,12 @@ const initDb = async () => {
                 FOR EACH ROW
                 BEGIN
                     INSERT INTO audit_log (action_type, table_name, record_id, details)
-                    VALUES ('UPDATE', 'matches', NEW.id, CONCAT('Match venue changed from ', OLD.venue, ' to ', NEW.venue));
+                    VALUES ('UPDATE', 'matches', NEW.match_id, CONCAT('Match venue changed from ', OLD.venue, ' to ', NEW.venue));
                 END
             `);
-        } catch (e) { console.log("❌ Trigger tr_audit_match_update creation failed:", e.message); }
+        } catch (e) { console.log("❌ Trigger tr_audit_match_update failed:", e.message); }
 
-        // 5. TRIGGER: Audit Booking Deletion
+        // 6. TRIGGER: Audit Booking Deletion
         try {
             await pool.query("DROP TRIGGER IF EXISTS tr_audit_booking_delete");
             await pool.query(`
@@ -230,23 +264,21 @@ const initDb = async () => {
                 FOR EACH ROW
                 BEGIN
                     INSERT INTO audit_log (action_type, table_name, record_id, user_email, details)
-                    VALUES ('DELETE_BOOKING', 'bookings', OLD.id, OLD.user_email, CONCAT('Deleted booking for ', OLD.match_title));
+                    VALUES ('DELETE_BOOKING', 'bookings', OLD.booking_id, OLD.user_email, CONCAT('Deleted booking for ', OLD.match_title));
                 END
             `);
-        } catch (e) { console.log("❌ Trigger tr_audit_booking_delete creation failed:", e.message); }
+        } catch (e) { console.log("❌ Trigger tr_audit_booking_delete failed:", e.message); }
 
-        console.log('✅ All DB concepts checked/created');
+        console.log('✅ All DB concepts updated with new PK names');
 
-        // Set Default Admin (Wrapped in try-catch to prevent server crash if column missing)
+        // Set Default Admin
         try {
             await pool.execute('UPDATE users SET is_admin = TRUE WHERE email = ?', ['sanjithsvpm@gmail.com']);
-            console.log('👑 Admin privileges checked for sanjithsvpm@gmail.com');
-        } catch (e) {
-            console.log("⚠️ Could not set admin status (is_admin column might be missing):", e.message);
-        }
+            console.log('👑 Admin privileges checked');
+        } catch (e) { console.log("⚠️ Could not set admin status:", e.message); }
 
 
-        // Seed Stadiums: Safe "Check and Add" approach to avoid Foreign Key violations
+        // Seed Stadiums
         const stadiumsList = [
             ['M. Chinnaswamy Stadium', 'Bangalore', 35000],
             ['MA Chidambaram Stadium', 'Chennai', 38000],
@@ -266,17 +298,13 @@ const initDb = async () => {
         for (const stadium of stadiumsList) {
             const [exists] = await pool.execute('SELECT stadium_id FROM stadiums WHERE name = ?', [stadium[0]]);
             if (exists.length === 0) {
-                await pool.execute(
-                    'INSERT INTO stadiums (name, city, capacity) VALUES (?, ?, ?)',
-                    stadium
-                );
+                await pool.execute('INSERT INTO stadiums (name, city, capacity) VALUES (?, ?, ?)', stadium);
             }
         }
-        console.log('✅ Stadium check/seed complete');
 
         // Seed Bangalore stands if empty
-        const checkStands = await pool.execute('SELECT count(*) as count FROM stands WHERE city_key = "Bangalore"');
-        if (checkStands[0][0].count === 0) {
+        const [checkStands] = await pool.execute('SELECT count(*) as count FROM stands WHERE city_key = "Bangalore"');
+        if (checkStands[0].count === 0) {
             const bangaloreStands = [
                 ['Bangalore', 'Sun Pharma A Stand', 2300],
                 ['Bangalore', 'Confirmtkt H Upper Stand', 3300],
@@ -295,14 +323,11 @@ const initDb = async () => {
             ];
 
             for (const stand of bangaloreStands) {
-                await pool.execute(
-                    'INSERT INTO stands (city_key, name, price) VALUES (?, ?, ?)',
-                    stand
-                );
+                await pool.execute('INSERT INTO stands (city_key, name, price) VALUES (?, ?, ?)', stand);
             }
         }
 
-        console.log('Database initialized successfully');
+        console.log('Database initialized successfully with new Primary Key naming convention');
     } catch (error) {
         console.error('Database initialization failed:', error.message);
     }

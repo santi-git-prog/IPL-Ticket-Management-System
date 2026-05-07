@@ -6,7 +6,7 @@ import { ArrowLeft, MapPin, Info, Users, CreditCard, Loader2, CheckCircle, XCirc
 import './Booking.css';
 
 interface MatchDetail {
-  id: number;
+  match_id: number;
   title: string;
   team1: string;
   team2: string;
@@ -39,6 +39,7 @@ export const Booking = () => {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [availableStands, setAvailableStands] = useState<{ 
+    stand_id: number,
     name: string, 
     price: number,
     capacity: number,
@@ -74,7 +75,7 @@ export const Booking = () => {
             // Save to database
             await axios.post('http://localhost:5000/api/payments/save-booking', {
               userEmail: localStorage.getItem('userEmail'),
-              matchId: match.id,
+              matchId: match.match_id,
               matchTitle: match.title,
               standName: selectedStand,
               quantity: quantity,
@@ -222,7 +223,7 @@ export const Booking = () => {
                       const isSoldOut = Number(stand.available_capacity) === 0;
                       
                       return (
-                        <tr key={index} className={`${selectedStand === stand.name ? 'selected' : ''} ${isSoldOut ? 'sold-out' : ''}`} onClick={() => !isSoldOut && setSelectedStand(stand.name)}>
+                        <tr key={stand.stand_id} className={`${selectedStand === stand.name ? 'selected' : ''} ${isSoldOut ? 'sold-out' : ''}`} onClick={() => !isSoldOut && setSelectedStand(stand.name)}>
                           <td>{stand.name}</td>
                           <td>₹{stand.price.toLocaleString()}</td>
                           <td>
@@ -265,7 +266,7 @@ export const Booking = () => {
                     const statusText = isSoldOut ? 'Sold Out' : isLowStock ? 'Fast Filling' : 'Available';
 
                     return (
-                      <option key={index} value={stand.name} disabled={isSoldOut}>
+                      <option key={stand.stand_id} value={stand.name} disabled={isSoldOut}>
                         {stand.name} - ₹{stand.price.toLocaleString()} ({statusText}: {stand.available_capacity} left)
                       </option>
                     );

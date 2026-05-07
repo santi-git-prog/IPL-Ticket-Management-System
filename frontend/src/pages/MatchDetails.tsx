@@ -11,7 +11,7 @@ interface Highlight {
 }
 
 interface MatchDetail {
-  id: number;
+  match_id: number;
   title: string;
   team1: string;
   team2: string;
@@ -161,7 +161,7 @@ export const MatchDetails = () => {
             </div>
             <button 
               className={`book-btn ${isAdmin ? 'admin-disabled' : ''}`}
-              onClick={() => !isAdmin && navigate(`/booking/${match.id}`)}
+              onClick={() => !isAdmin && navigate(`/booking/${match.match_id}`)}
               disabled={isAdmin}
             >
               <span>{isAdmin ? 'Admin View Only' : 'Book Tickets'}</span>

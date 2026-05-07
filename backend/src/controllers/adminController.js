@@ -34,7 +34,7 @@ export const getBookingsByMatch = async (req, res) => {
     try {
         const { matchId } = req.params;
         const [rows] = await pool.execute(
-            'SELECT * FROM vw_booking_details WHERE id IN (SELECT id FROM bookings WHERE match_id = ?) ORDER BY created_at DESC',
+            'SELECT * FROM vw_booking_details WHERE booking_id IN (SELECT booking_id FROM bookings WHERE match_id = ?) ORDER BY created_at DESC',
             [matchId]
         );
         res.status(200).json(rows);

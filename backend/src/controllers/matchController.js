@@ -3,12 +3,12 @@ import pool from '../config/db.js';
 export const getAllMatches = async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT m.id, m.title, m.team1, m.team2, m.date_time, 
+            SELECT m.match_id, m.title, m.team1, m.team2, m.date_time, 
                    COALESCE(s.name, SUBSTRING_INDEX(m.venue, ',', 1)) as venue,
                    COALESCE(s.city, SUBSTRING_INDEX(m.venue, ',', -1)) as city
             FROM matches m 
             LEFT JOIN stadiums s ON (m.venue LIKE CONCAT('%', s.name, '%') OR m.venue = s.city)
-            ORDER BY m.id ASC
+            ORDER BY m.match_id ASC
         `);
         res.status(200).json(rows);
     } catch (error) {
@@ -27,7 +27,7 @@ export const getMatchById = async (req, res) => {
                    s.capacity
             FROM matches m 
             LEFT JOIN stadiums s ON (m.venue LIKE CONCAT('%', s.name, '%') OR m.venue = s.city)
-            WHERE m.id = ?
+            WHERE m.match_id = ?
         `, [matchId]);
         
         if (rows.length === 0) {
@@ -58,7 +58,7 @@ export const getMatchById = async (req, res) => {
 export const getStandsByCity = async (req, res) => {
     try {
         const cityKey = req.params.cityKey;
-        const [rows] = await pool.execute('SELECT name, price FROM stands WHERE city_key = ?', [cityKey]);
+        const [rows] = await pool.execute('SELECT stand_id, name, price FROM stands WHERE city_key = ?', [cityKey]);
         res.status(200).json(rows);
     } catch (error) {
         console.error('Error fetching stands:', error.message);
@@ -75,7 +75,7 @@ export const getStandsByMatchId = async (req, res) => {
             SELECT m.venue, s.city 
             FROM matches m 
             LEFT JOIN stadiums s ON m.venue LIKE CONCAT('%', s.name, '%')
-            WHERE m.id = ?
+            WHERE m.match_id = ?
         `, [matchId]);
 
         if (matchRows.length === 0) {
@@ -95,6 +95,7 @@ export const getStandsByMatchId = async (req, res) => {
         // 2. Get stands for that city and calculate availability
         const [standRows] = await pool.execute(`
             SELECT 
+                s.stand_id,
                 s.name, 
                 s.price, 
                 s.capacity,

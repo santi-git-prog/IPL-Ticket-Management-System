@@ -68,7 +68,7 @@ export const signup = async (req, res) => {
 
     // 2. Check if user already exists
     const [existingUsers] = await pool.execute(
-      'SELECT id FROM users WHERE email = ?',
+      'SELECT user_id FROM users WHERE email = ?',
       [email]
     );
 
@@ -111,7 +111,7 @@ export const login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
     const token = jwt.sign(
-      { id: user.id, username: user.username },
+      { id: user.user_id, username: user.username },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '1h' }
     );
@@ -119,7 +119,7 @@ export const login = async (req, res) => {
     res.json({
       token,
       user: { 
-        id: user.id, 
+        user_id: user.user_id, 
         username: user.username, 
         email: user.email,
         isAdmin: !!(user && user.is_admin)

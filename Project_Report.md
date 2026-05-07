@@ -81,7 +81,7 @@ erDiagram
     MATCH ||--o{ AUDIT_LOG : "generates"
 
     USER {
-        int id PK "Auto-increment"
+        int user_id PK "Auto-increment"
         string username "Required"
         string email UK "Unique Identifier"
         string password "Hashed"
@@ -90,7 +90,7 @@ erDiagram
     }
 
     MATCH {
-        int id PK "Auto-increment"
+        int match_id PK "Auto-increment"
         string title "Match Name"
         string team1 "Home Team"
         string team2 "Away Team"
@@ -108,7 +108,7 @@ erDiagram
     }
 
     STAND {
-        int id PK
+        int stand_id PK
         string city_key FK "Links to Stadium City"
         string name "Stand Name"
         int price "Ticket Rate"
@@ -116,7 +116,7 @@ erDiagram
     }
 
     BOOKING {
-        int id PK
+        int booking_id PK
         string user_email FK "Reference to User"
         int match_id FK "Reference to Match"
         string match_title "Snapshot"
@@ -128,14 +128,14 @@ erDiagram
     }
 
     OTP {
-        int id PK
+        int otp_id PK
         string email "Target Email"
         string otp "6-digit code"
         datetime expires_at "Expiry"
     }
 
     AUDIT_LOG {
-        int log_id PK
+        int audit_log_id PK
         string action_type "INSERT/UPDATE/BOOKING"
         string table_name "Source Table"
         int record_id "Target ID"
@@ -172,13 +172,13 @@ erDiagram
 
 ## 6. Relational Model
 The database is structured as follows:
-- **users** (`id`, `username`, `email`, `password`, `is_admin`, `created_at`)
-- **matches** (`id`, `title`, `team1`, `team2`, `date_time`, `venue`, `about_text`, `highlights`)
-- **stands** (`id`, `city_key`, `name`, `price`, `capacity`)
-- **bookings** (`id`, `user_email`, `match_id`, `match_title`, `stand_name`, `quantity`, `total_amount`, `payment_id`, `order_id`, `created_at`)
+- **users** (`user_id`, `username`, `email`, `password`, `is_admin`, `created_at`)
+- **matches** (`match_id`, `title`, `team1`, `team2`, `date_time`, `venue`, `about_text`, `highlights`)
+- **stands** (`stand_id`, `city_key`, `name`, `price`, `capacity`)
+- **bookings** (`booking_id`, `user_email`, `match_id`, `match_title`, `stand_name`, `quantity`, `total_amount`, `payment_id`, `order_id`, `created_at`)
 - **stadiums** (`stadium_id`, `name`, `city`, `capacity`)
-- **otps** (`id`, `email`, `otp`, `expires_at`)
-- **audit_log** (`log_id`, `action_type`, `table_name`, `record_id`, `user_email`, `action_timestamp`, `details`)
+- **otps** (`otp_id`, `email`, `otp`, `expires_at`)
+- **audit_log** (`audit_log_id`, `action_type`, `table_name`, `record_id`, `user_email`, `action_timestamp`, `details`)
 
 ---
 
@@ -196,7 +196,7 @@ The database schema is initialized automatically upon server startup. Key table 
 
 ```sql
 CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE matches (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    match_id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     team1 VARCHAR(255) NOT NULL,
     team2 VARCHAR(255) NOT NULL,
@@ -214,7 +214,7 @@ CREATE TABLE matches (
 );
 
 CREATE TABLE stands (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    stand_id INT AUTO_INCREMENT PRIMARY KEY,
     city_key VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     price INT NOT NULL,
@@ -222,7 +222,7 @@ CREATE TABLE stands (
 );
 
 CREATE TABLE bookings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
     user_email VARCHAR(255) NOT NULL,
     match_id INT NOT NULL,
     stand_name VARCHAR(255) NOT NULL,
