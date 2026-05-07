@@ -92,8 +92,22 @@ export const getStandsByMatchId = async (req, res) => {
             cityKey = parts[parts.length - 1].trim();
         }
 
-        // 2. Get stands for that city
-        const [standRows] = await pool.execute('SELECT name, price FROM stands WHERE city_key = ?', [cityKey]);
+        // 2. Get stands for that city and calculate availability
+        const [standRows] = await pool.execute(`
+            SELECT 
+                s.name, 
+                s.price, 
+                s.capacity,
+                (s.capacity - IFNULL(b.sold_quantity, 0)) as available_capacity
+            FROM stands s
+            LEFT JOIN (
+                SELECT stand_name, SUM(quantity) as sold_quantity
+                FROM bookings
+                WHERE match_id = ?
+                GROUP BY stand_name
+            ) b ON s.name = b.stand_name
+            WHERE s.city_key = ?
+        `, [matchId, cityKey]);
         
         res.status(200).json(standRows);
     } catch (error) {

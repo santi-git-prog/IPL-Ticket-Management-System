@@ -70,9 +70,17 @@ const initDb = async () => {
                 city_key VARCHAR(255) NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 price INT NOT NULL,
+                capacity INT DEFAULT 500,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Ensure capacity column exists for existing tables
+        try {
+            await pool.execute("ALTER TABLE stands ADD COLUMN capacity INT DEFAULT 500 AFTER price");
+        } catch (err) {
+            // Column already exists, ignore error
+        }
 
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS bookings (

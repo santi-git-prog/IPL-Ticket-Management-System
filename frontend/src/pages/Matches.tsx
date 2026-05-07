@@ -52,6 +52,7 @@ export const Matches = () => {
   const [allBookings, setAllBookings] = useState<BookingRecord[]>([]);
   const [adminTab, setAdminTab] = useState<'summary' | 'details' | 'match'>('summary');
   const [selectedMatchTitle, setSelectedMatchTitle] = useState<string>('');
+  const [matchStands, setMatchStands] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -113,6 +114,11 @@ export const Matches = () => {
       setLoading(true);
       const res = await axios.get(`http://localhost:5000/api/admin/match-bookings/${matchId}`);
       setAllBookings(res.data);
+      
+      // Fetch stand availability for the match
+      const standsRes = await axios.get(`http://localhost:5000/api/matches/${matchId}/stands`);
+      setMatchStands(standsRes.data);
+
       setSelectedMatchTitle(matchTitle);
       setActiveTab('admin');
       setAdminTab('match');
@@ -123,35 +129,6 @@ export const Matches = () => {
     }
   };
 
-  const handleDeleteBooking = async (bookingId: number) => {
-    if (!window.confirm('Are you sure you want to delete this booking? This action cannot be undone and will update the match revenue summary.')) {
-      return;
-    }
-
-    try {
-      await axios.delete(`http://localhost:5000/api/admin/bookings/${bookingId}`);
-      
-      // Refresh the data based on current view
-      if (adminTab === 'details') {
-        const res = await axios.get('http://localhost:5000/api/admin/booking-details');
-        setAllBookings(res.data);
-      } else if (adminTab === 'match') {
-        // Find the match ID from one of the existing bookings if possible, or we need to track it
-        // For now, let's just refresh all bookings if match tab is active
-        const res = await axios.get('http://localhost:5000/api/admin/booking-details');
-        setAllBookings(res.data);
-      }
-      
-      // Also refresh summary since it will change
-      const summaryRes = await axios.get('http://localhost:5000/api/admin/booking-summary');
-      setAdminSummary(summaryRes.data);
-      
-      alert('Booking deleted successfully');
-    } catch (error) {
-      console.error('Error deleting booking:', error);
-      alert('Failed to delete booking');
-    }
-  };
 
   const getInitial = () => {
     if (userName && userName.length > 0) return userName.charAt(0).toUpperCase();
@@ -506,9 +483,39 @@ export const Matches = () => {
                 {adminTab === 'match' && (
                   <div className="match-filter-indicator">
                     <span>Showing bookings only for: <strong>{selectedMatchTitle}</strong></span>
-                    <button onClick={() => setAdminTab('summary')} className="clear-match-filter">View All Matches</button>
+                    <button onClick={() => { setAdminTab('summary'); setMatchStands([]); }} className="clear-match-filter">View All Matches</button>
                   </div>
                 )}
+
+                {adminTab === 'match' && matchStands.length > 0 && (
+                  <div className="admin-stands-availability">
+                    <h4>Stands Availability</h4>
+                    <table className="bookings-table stands-availability-table" style={{ marginBottom: '2rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Stand Name</th>
+                          <th>Capacity</th>
+                          <th>Sold</th>
+                          <th>Remaining</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matchStands.map((stand, idx) => (
+                          <tr key={idx}>
+                            <td>{stand.name}</td>
+                            <td>{stand.capacity}</td>
+                            <td>{stand.capacity - Number(stand.available_capacity)}</td>
+                            <td style={{ color: Number(stand.available_capacity) < (stand.capacity * 0.15) ? '#ef4444' : '#22c55e', fontWeight: 700 }}>
+                              {stand.available_capacity}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <h4>Recent Bookings</h4>
+                  </div>
+                )}
+
                 <table className="bookings-table">
                   <thead>
                     <tr>
@@ -518,7 +525,6 @@ export const Matches = () => {
                       <th>Amount</th>
                       <th>Payment ID</th>
                       <th>Date</th>
-                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -535,15 +541,6 @@ export const Matches = () => {
                         <td><span className="booking-amount">₹{booking.total_amount.toLocaleString()}</span></td>
                         <td><code style={{ fontSize: '0.75rem' }}>{booking.payment_id}</code></td>
                         <td>{new Date(booking.created_at).toLocaleDateString()}</td>
-                        <td>
-                          <button 
-                            className="admin-delete-btn"
-                            onClick={() => handleDeleteBooking(booking.id)}
-                            title="Delete Booking"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>

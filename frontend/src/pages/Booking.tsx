@@ -38,7 +38,12 @@ export const Booking = () => {
   const navigate = useNavigate();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [availableStands, setAvailableStands] = useState<{ name: string, price: number }[]>([]);
+  const [availableStands, setAvailableStands] = useState<{ 
+    name: string, 
+    price: number,
+    capacity: number,
+    available_capacity: number | string 
+  }[]>([]);
   const [selectedStand, setSelectedStand] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -208,15 +213,33 @@ export const Booking = () => {
                   <tr>
                     <th>Stand Name</th>
                     <th>Price (₹)</th>
+                    <th>Availability</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {availableStands.map((stand, index) => (
-                    <tr key={index} className={selectedStand === stand.name ? 'selected' : ''} onClick={() => setSelectedStand(stand.name)}>
-                      <td>{stand.name}</td>
-                      <td>₹{stand.price.toLocaleString()}</td>
-                    </tr>
-                  ))}
+                    {availableStands.map((stand, index) => {
+                      const isLowStock = Number(stand.available_capacity) > 0 && Number(stand.available_capacity) < (stand.capacity * 0.15);
+                      const isSoldOut = Number(stand.available_capacity) === 0;
+                      
+                      return (
+                        <tr key={index} className={`${selectedStand === stand.name ? 'selected' : ''} ${isSoldOut ? 'sold-out' : ''}`} onClick={() => !isSoldOut && setSelectedStand(stand.name)}>
+                          <td>{stand.name}</td>
+                          <td>₹{stand.price.toLocaleString()}</td>
+                          <td>
+                            {isSoldOut ? (
+                              <span className="status-badge sold-out-badge">Sold Out</span>
+                            ) : isLowStock ? (
+                              <span className="status-badge fast-filling-badge">Fast Filling</span>
+                            ) : (
+                              <span className="status-badge available-badge">Available</span>
+                            )}
+                            <span className="seats-count" style={{ marginLeft: '10px', fontSize: '0.85rem', opacity: 0.7 }}>
+                              ({stand.available_capacity} left)
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -236,9 +259,17 @@ export const Booking = () => {
                   className="stand-select"
                 >
                   <option value="">Select a stand</option>
-                  {availableStands.map((stand, index) => (
-                    <option key={index} value={stand.name}>{stand.name} - ₹{stand.price.toLocaleString()}</option>
-                  ))}
+                  {availableStands.map((stand, index) => {
+                    const isLowStock = Number(stand.available_capacity) > 0 && Number(stand.available_capacity) < (stand.capacity * 0.15);
+                    const isSoldOut = Number(stand.available_capacity) === 0;
+                    const statusText = isSoldOut ? 'Sold Out' : isLowStock ? 'Fast Filling' : 'Available';
+
+                    return (
+                      <option key={index} value={stand.name} disabled={isSoldOut}>
+                        {stand.name} - ₹{stand.price.toLocaleString()} ({statusText}: {stand.available_capacity} left)
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -247,7 +278,7 @@ export const Booking = () => {
                 <div className="quantity-selector">
                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
                   <span>{quantity}</span>
-                  <button onClick={() => setQuantity(Math.min(10, quantity + 1))}>+</button>
+                  <button onClick={() => setQuantity(Math.min(currentStand ? Number(currentStand.available_capacity) : 10, quantity + 1))}>+</button>
                 </div>
               </div>
             </div>

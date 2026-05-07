@@ -44,13 +44,3 @@ export const getBookingsByMatch = async (req, res) => {
     }
 };
 
-export const deleteBooking = async (req, res) => {
-    try {
-        const { id } = req.params;
-        await pool.execute('DELETE FROM bookings WHERE id = ?', [id]);
-        res.status(200).json({ message: 'Booking deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting booking:', error.message);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
-};
