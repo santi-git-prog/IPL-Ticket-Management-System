@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, MapPin, ArrowRight, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react';
 import { getTeamLogo } from '../utils/teamLogos';
 import './Matches.css';
 
@@ -53,6 +53,7 @@ export const Matches = () => {
   const [adminTab, setAdminTab] = useState<'summary' | 'details' | 'match'>('summary');
   const [selectedMatchTitle, setSelectedMatchTitle] = useState<string>('');
   const [matchStands, setMatchStands] = useState<any[]>([]);
+  const [showAll, setShowAll] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -179,17 +180,24 @@ export const Matches = () => {
   const filteredMatches = matches.filter(m => {
     const teamMatch = filterTeams.length === 0 || filterTeams.includes(m.team1) || filterTeams.includes(m.team2);
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const matchDateObj = parseMatchDate(m.date_time);
+    const isPast = !isNaN(matchDateObj.getTime()) && matchDateObj < today;
+
     let dateMatch = true;
     if (filterDate) {
       const selectedDateObj = new Date(filterDate);
       selectedDateObj.setHours(0, 0, 0, 0);
-      const matchDateObj = parseMatchDate(m.date_time);
       
       if (!isNaN(matchDateObj.getTime())) {
         dateMatch = matchDateObj >= selectedDateObj;
       }
     }
     
+    // Default view: Show all upcoming matches (including those > 5 days)
+    if (!showAll && isPast) return false;
+
     return teamMatch && dateMatch;
   });
 
@@ -200,6 +208,23 @@ export const Matches = () => {
         : [...prev, team]
     );
     setVisibleCount(10);
+  };
+
+  const getBookingCountdown = (matchDateStr: string) => {
+    const matchDate = parseMatchDate(matchDateStr);
+    const bookingOpenDate = new Date(matchDate.getTime() - (5 * 24 * 60 * 60 * 1000));
+    bookingOpenDate.setHours(0, 0, 0, 0);
+    
+    const now = new Date();
+    const diff = bookingOpenDate.getTime() - now.getTime();
+    
+    if (diff <= 0) return null;
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { days, hours, mins };
   };
 
   return (
@@ -238,10 +263,16 @@ export const Matches = () => {
       <div className="matches-content">
         <div className="title-section">
           <div className="badge">TATA IPL 2026</div>
-          <h1>{activeTab === 'matches' ? 'Upcoming Fixtures' : 'My Ticket Bookings'}</h1>
+          <h1>
+            {activeTab === 'matches' 
+              ? (showAll ? 'All Fixtures' : 'Upcoming Fixtures') 
+              : 'My Ticket Bookings'}
+          </h1>
           <p>
             {activeTab === 'matches' 
-              ? 'Book your tickets and witness the ultimate cricketing battles live with Satrix.' 
+              ? (showAll 
+                  ? 'Viewing all matches including recently completed and future fixtures.'
+                  : 'Viewing matches with bookings open now (within next 5 days).')
               : 'Managing your confirmed ticket purchases and match day details.'}
           </p>
         </div>
@@ -323,55 +354,107 @@ export const Matches = () => {
             </div>
 
             <div className="matches-grid">
-              {filteredMatches.slice(0, visibleCount).map((match) => (
-                <div 
-                  key={match.id} 
-                  className={`match-card ${isAdmin ? 'admin-mode' : ''}`} 
-                  onClick={() => isAdmin ? handleAdminMatchClick(match.id, match.title) : navigate(`/matches/${match.id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="match-card-top">
-                    <span className="match-title">{match.title}</span>
-                  </div>
-                  <div className="match-teams">
-                    <div className="team">
-                      <img src={getTeamLogo(match.team1)} alt={match.team1} className="team-logo-img" />
-                      <span className="team-name">{match.team1}</span>
+              {filteredMatches.slice(0, visibleCount).map((match) => (() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const matchDateObj = parseMatchDate(match.date_time);
+                  const isPast = !isNaN(matchDateObj.getTime()) && matchDateObj < today;
+                  
+                  // Calculate days until match
+                  const diffTime = matchDateObj.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  const isBookingOpen = !isPast && diffDays <= 5;
+                  const isUpcoming = !isPast && diffDays > 5;
+
+                  return (
+                    <div 
+                      key={match.id} 
+                      className={`match-card ${isAdmin ? 'admin-mode' : ''} ${isPast ? 'past-match' : ''} ${isUpcoming ? 'upcoming-match' : ''}`} 
+                      onClick={() => {
+                        if ((isPast || isUpcoming) && !isAdmin) return;
+                        isAdmin ? handleAdminMatchClick(match.id, match.title) : navigate(`/matches/${match.id}`)
+                      }}
+                      style={{ cursor: ((isPast || isUpcoming) && !isAdmin) ? 'default' : 'pointer' }}
+                    >
+                      <div className="match-card-top">
+                        <span className="match-title">{match.title}</span>
+                      </div>
+                      <div className="match-teams">
+                        <div className="team">
+                          <img src={getTeamLogo(match.team1)} alt={match.team1} className="team-logo-img" />
+                          <span className="team-name">{match.team1}</span>
+                        </div>
+                        <div className="vs-badge">VS</div>
+                        <div className="team">
+                          <img src={getTeamLogo(match.team2)} alt={match.team2} className="team-logo-img" />
+                          <span className="team-name">{match.team2}</span>
+                        </div>
+                      </div>
+                      <div className="match-details">
+                        <div className="detail-item">
+                          <Calendar size={16} className="detail-icon" />
+                          <span>{match.date_time}</span>
+                        </div>
+                        <div className="detail-item">
+                          <MapPin size={16} className="detail-icon" />
+                          <span>{match.venue.split(',')[0].trim()}</span>
+                        </div>
+                      </div>
+                      <div className="match-action">
+                        {isPast ? (
+                          <span className="completed-badge">Completed</span>
+                        ) : isUpcoming ? (
+                          (() => {
+                            const countdown = getBookingCountdown(match.date_time);
+                            return countdown ? (
+                              <div className="booking-countdown">
+                                <span className="countdown-label">Bookings open in</span>
+                                <div className="timer-values">
+                                  <span>{countdown.days}d</span>
+                                  <span>{countdown.hours}h</span>
+                                  <span>{countdown.mins}m</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <span>{isAdmin ? 'View Match Analytics' : 'View Details & Book'}</span>
+                                <ArrowRight size={18} className="action-icon" />
+                              </>
+                            );
+                          })()
+                        ) : (
+                          <>
+                            <span>{isAdmin ? 'View Match Analytics' : 'View Details & Book'}</span>
+                            <ArrowRight size={18} className="action-icon" />
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="vs-badge">VS</div>
-                    <div className="team">
-                      <img src={getTeamLogo(match.team2)} alt={match.team2} className="team-logo-img" />
-                      <span className="team-name">{match.team2}</span>
-                    </div>
-                  </div>
-                  <div className="match-details">
-                    <div className="detail-item">
-                      <Calendar size={16} className="detail-icon" />
-                      <span>{match.date_time}</span>
-                    </div>
-                    <div className="detail-item">
-                      <MapPin size={16} className="detail-icon" />
-                      <span>{match.venue.split(',')[0].trim()}</span>
-                    </div>
-                  </div>
-                  <div className="match-action">
-                    <span>{isAdmin ? 'View Match Analytics' : 'View Details & Book'}</span>
-                    <ArrowRight size={18} className="action-icon" />
-                  </div>
-                </div>
-              ))}
+                  );
+                })())}
             </div>
             
-            {visibleCount < filteredMatches.length && (
-              <div className="show-more-container">
+            <div className="show-more-container">
+              {showAll ? (
                 <button 
                   className="show-more-btn" 
-                  onClick={() => setVisibleCount(filteredMatches.length)}
+                  onClick={() => { setShowAll(false); setVisibleCount(10); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: 'none' }}
                 >
-                  Show More Matches
+                  <ArrowLeft size={16} /> Back to Upcoming Matches
                 </button>
-              </div>
-            )}
+              ) : (
+                filteredMatches.length > 0 && (
+                  <button 
+                    className="show-more-btn outline" 
+                    onClick={() => { setShowAll(true); setVisibleCount(matches.length); }}
+                  >
+                    View Completed Matches
+                  </button>
+                )
+              )}
+            </div>
           </>
         ) : activeTab === 'bookings' ? (
           <div className="bookings-section">

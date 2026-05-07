@@ -198,6 +198,29 @@
   margin-bottom: 1rem;
 }
 
+.back-to-active-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-to-active-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(-4px);
+}
+
 .title-section p {
   color: #9ca3af;
   font-size: 1.125rem;
@@ -750,6 +773,57 @@
   box-shadow: none;
 }
 
+.match-card.past-match {
+  opacity: 0.7;
+  filter: grayscale(0.6);
+  pointer-events: none;
+}
+
+.match-card.admin-mode.past-match {
+  pointer-events: auto;
+  opacity: 0.8;
+  filter: grayscale(0.2);
+}
+
+.completed-badge {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.show-more-btn.outline:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.match-card.upcoming-match {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.match-card.admin-mode.upcoming-match {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.booking-soon-badge {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
 .match-card.admin-mode .match-action {
   color: #94a3b8;
 }
@@ -807,4 +881,40 @@
   color: #fff;
   border-color: #ef4444;
   transform: scale(1.1);
+}
+
+.booking-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(14, 165, 233, 0.05);
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  border-radius: 16px;
+  width: 100%;
+}
+
+.countdown-label {
+  font-size: 0.7rem;
+  color: #0ea5e9;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+
+.timer-values {
+  display: flex;
+  gap: 1rem;
+  font-family: 'Inter', monospace;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.timer-values span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
 }
