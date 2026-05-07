@@ -25,9 +25,12 @@ The IPL Ticket Management System addresses these by providing a modern, fast, an
 3. **Stand Selection**: Users can view different stands available at the stadium with corresponding ticket prices.
 4. **Booking & Payment**: Integration with Razorpay for secure payments and a transactional booking process.
 5. **Booking History**: Users can view their past bookings with detailed summaries.
-6. **Admin Dashboard**: A secure interface for administrators to monitor system performance, analyze revenue, and manage ticket bookings.
-7. **Booking Management**: Administrators can view global booking details and delete records to resolve conflicts or handle cancellations.
-8. **Audit Logging**: Automatic logging of critical actions like bookings, match updates, and deletions for administrative tracking.
+7. **Real-Time Capacity Tracking**: Automatic calculation of available seats per stand by subtracting booked tickets from total capacity.
+8. **Rolling Booking Window**: A sophisticated scheduling system where ticket bookings open exactly 5 days before each match.
+9. **Booking Countdown**: A live countdown timer for upcoming matches, showing days, hours, and minutes until bookings open.
+10. **Availability Monitoring**: Visual indicators for stand status: "Available", "Fast Filling" (less than 15% capacity), and "Sold Out".
+11. **Admin Dashboard**: A secure interface for administrators to monitor system performance, analyze revenue, and view stand-wise availability analytics.
+12. **Audit Logging**: Automatic logging of critical actions like bookings and match updates for administrative tracking.
 
 ### Non-Functional Requirements
 1. **Security**: Use of **BCrypt** for password encryption, **JWT** for session management, and **TCL (Transactions)** for database consistency.
@@ -109,6 +112,7 @@ erDiagram
         string city_key FK "Links to Stadium City"
         string name "Stand Name"
         int price "Ticket Rate"
+        int capacity "Seating Limit"
     }
 
     BOOKING {
@@ -170,7 +174,7 @@ erDiagram
 The database is structured as follows:
 - **users** (`id`, `username`, `email`, `password`, `is_admin`, `created_at`)
 - **matches** (`id`, `title`, `team1`, `team2`, `date_time`, `venue`, `about_text`, `highlights`)
-- **stands** (`id`, `city_key`, `name`, `price`)
+- **stands** (`id`, `city_key`, `name`, `price`, `capacity`)
 - **bookings** (`id`, `user_email`, `match_id`, `match_title`, `stand_name`, `quantity`, `total_amount`, `payment_id`, `order_id`, `created_at`)
 - **stadiums** (`stadium_id`, `name`, `city`, `capacity`)
 - **otps** (`id`, `email`, `otp`, `expires_at`)
@@ -209,6 +213,14 @@ CREATE TABLE matches (
     -- ... other fields
 );
 
+CREATE TABLE stands (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    city_key VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price INT NOT NULL,
+    capacity INT DEFAULT 500
+);
+
 CREATE TABLE bookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_email VARCHAR(255) NOT NULL,
@@ -238,10 +250,14 @@ The project implements advanced SQL concepts to enhance functionality:
 - **Transactions (TCL)**: All booking operations use `START TRANSACTION`, `COMMIT`, and `ROLLBACK` to ensure no partial data is saved if a failure occurs.
 
 ### Frontend Features
-- **Admin Dashboard**: A specialized view for administrators featuring revenue analytics, ticket sales tracking, and global booking management tools.
+- **Admin Dashboard**: A specialized view for administrators featuring revenue analytics, ticket sales tracking, and real-time stand-wise availability data for every match.
 - **Responsive Logo Grid**: Users can filter matches by clicking on team logos.
-- **Date Filtering**: Advanced match filtering allows users and admins to view fixtures scheduled from a specific date onwards.
-- **Glassmorphic UI**: High-end aesthetic with blurred backgrounds and vibrant gradients.
+- **Rolling Booking Window & Countdowns**: A dynamic schedule that automatically opens bookings 5 days before a match, featuring a live countdown timer (Days, Hours, Minutes) for upcoming fixtures.
+- **Dynamic Availability Status**: Stands feature live-updated badges:
+    - **Available (Green)**: Standard seating availability.
+    - **Fast Filling (Orange)**: Triggered when remaining seats drop below 15%.
+    - **Sold Out (Grayscale)**: Automatically disables booking for that stand.
+- **Glassmorphic UI**: High-end aesthetic with blurred backgrounds, vibrant gradients, and premium status indicators.
 - **Dynamic Routing**: Uses React Router for smooth navigation between matches, details, and booking pages.
 - **Role-Based Navigation**: The interface dynamically adjusts its navigation tabs based on whether the logged-in user has administrative privileges.
 
